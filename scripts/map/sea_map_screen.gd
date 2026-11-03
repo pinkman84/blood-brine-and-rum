@@ -17,5 +17,9 @@ func _build() -> void:
 func refresh() -> void:
 	var ammo_lines: Array[String] = []
 	for ammo_id: String in GameState.run.ammo:
-		ammo_lines.append("%s %d" % [Data.get_item("ammo", ammo_id).get("name", ammo_id), GameState.run.ammo[ammo_id]])
+		var ammo_name := str(Data.get_item("ammo", ammo_id).get("name", ammo_id))
+		if BattleShip.is_free_ammo(ammo_id):
+			ammo_lines.append(ammo_name)
+		else:
+			ammo_lines.append("%s %d" % [ammo_name, GameState.run.ammo[ammo_id]])
 	_info.text = run_summary() + "\nAmmo: " + ", ".join(ammo_lines)

@@ -13,6 +13,8 @@ var node_index: int = 0  # nodes resolved in the current sea
 var gold: int = 0
 var hull: int = 0
 var max_hull: int = 0
+var sails: int = 0
+var max_sails: int = 0
 var crew: Array[Dictionary] = []  # each: { name, role, level }
 var ammo: Dictionary = {}  # ammo id -> rounds
 var battles_won: int = 0
@@ -24,6 +26,8 @@ static func new_run(ship: Dictionary) -> RunState:
 	run.ship_id = str(ship["id"])
 	run.max_hull = int(ship["max_hull"])
 	run.hull = run.max_hull
+	run.max_sails = int(ship.get("max_sails", 20))
+	run.sails = run.max_sails
 	run.gold = int(ship.get("starting_gold", 0))
 	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
 	var rng := RandomNumberGenerator.new()
@@ -49,6 +53,8 @@ func to_dict() -> Dictionary:
 		"gold": gold,
 		"hull": hull,
 		"max_hull": max_hull,
+		"sails": sails,
+		"max_sails": max_sails,
 		"crew": crew,
 		"ammo": ammo,
 		"battles_won": battles_won,
@@ -64,6 +70,8 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.gold = int(data.get("gold", 0))
 	run.hull = int(data.get("hull", 0))
 	run.max_hull = int(data.get("max_hull", run.hull))
+	run.max_sails = int(data.get("max_sails", 20))
+	run.sails = int(data.get("sails", run.max_sails))
 	for member: Variant in data.get("crew", []):
 		var m: Dictionary = member
 		run.crew.append({"name": str(m.get("name", "")), "role": str(m.get("role", "")), "level": int(m.get("level", 1))})

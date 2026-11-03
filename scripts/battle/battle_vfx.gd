@@ -63,6 +63,11 @@ func impact(pos: Vector2) -> void:
 	shake(3.0)
 
 
+func sail_hit(pos: Vector2) -> void:
+	_burst(pos, Color(0.95, 0.92, 0.85), 12, 0.9, Vector2(0, -1), 120.0, 50.0, Vector2(0, 60), 2.0, null, false)
+	shake(1.5)
+
+
 func splash(pos: Vector2) -> void:
 	_burst(pos, Color(0.9, 0.95, 1.0), 16, 0.7, Vector2(0, -1), 18.0, 110.0, Vector2(0, 320), 2.0, null, false)
 
