@@ -1,8 +1,44 @@
 [
-  { "id": "gunner", "name": "Gunner", "station": "port_guns", "description": "Loads and fires the broadsides. Better gunners reload faster." },
-  { "id": "sailor", "name": "Sailor", "station": "sails", "description": "Works the rigging. Keeps the ship fast and able to flee." },
-  { "id": "helmsman", "name": "Helmsman", "station": "helm", "description": "Steers. Higher level makes coming about faster and safer." },
-  { "id": "carpenter", "name": "Carpenter", "station": "hull", "description": "Patches holes and repairs damaged rooms." },
-  { "id": "surgeon", "name": "Surgeon", "station": "sickbay", "description": "Heals wounded crew." },
-  { "id": "boarder", "name": "Boarder", "station": "deck", "description": "First across the rail in a boarding action." }
+  {
+    "id": "gunner",
+    "name": "Gunner",
+    "station": "guns",
+    "description": "Loads and fires the broadsides. Better gunners reload faster.",
+    "color": "e74c3c"
+  },
+  {
+    "id": "sailor",
+    "name": "Sailor",
+    "station": "sails",
+    "description": "Works the rigging. Keeps the ship fast and able to flee.",
+    "color": "3498db"
+  },
+  {
+    "id": "helmsman",
+    "name": "Helmsman",
+    "station": "helm",
+    "description": "Steers. Higher level makes coming about faster and safer.",
+    "color": "f1c40f"
+  },
+  {
+    "id": "carpenter",
+    "name": "Carpenter",
+    "station": "hold",
+    "description": "Patches holes and repairs damaged rooms.",
+    "color": "e67e22"
+  },
+  {
+    "id": "surgeon",
+    "name": "Surgeon",
+    "station": "sickbay",
+    "description": "Heals wounded crew.",
+    "color": "2ecc71"
+  },
+  {
+    "id": "boarder",
+    "name": "Boarder",
+    "station": "hold",
+    "description": "First across the rail in a boarding action.",
+    "color": "9b59b6"
+  }
 ]

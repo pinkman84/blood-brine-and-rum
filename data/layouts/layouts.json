@@ -1,0 +1,33 @@
+[
+  {
+    "id": "sloop",
+    "cols": 3,
+    "rows": 8,
+    "mast_rows": [2, 6],
+    "rooms": [
+      { "id": "rigging", "type": "sails", "x": 0, "y": 0, "w": 3, "h": 2 },
+      { "id": "port_guns", "type": "guns", "side": "port", "x": 0, "y": 2, "w": 1, "h": 4 },
+      { "id": "magazine", "type": "magazine", "x": 1, "y": 2, "w": 1, "h": 2 },
+      { "id": "sickbay", "type": "sickbay", "x": 1, "y": 4, "w": 1, "h": 2 },
+      { "id": "starboard_guns", "type": "guns", "side": "starboard", "x": 2, "y": 2, "w": 1, "h": 4 },
+      { "id": "hold", "type": "hold", "x": 0, "y": 6, "w": 3, "h": 1 },
+      { "id": "helm", "type": "helm", "x": 1, "y": 7, "w": 1, "h": 1 }
+    ]
+  },
+  {
+    "id": "brigantine",
+    "cols": 3,
+    "rows": 9,
+    "mast_rows": [2, 7],
+    "rooms": [
+      { "id": "rigging", "type": "sails", "x": 0, "y": 0, "w": 3, "h": 2 },
+      { "id": "port_guns", "type": "guns", "side": "port", "x": 0, "y": 2, "w": 1, "h": 5 },
+      { "id": "magazine", "type": "magazine", "x": 1, "y": 2, "w": 1, "h": 2 },
+      { "id": "sickbay", "type": "sickbay", "x": 1, "y": 4, "w": 1, "h": 2 },
+      { "id": "stores", "type": "hold", "x": 1, "y": 6, "w": 1, "h": 1 },
+      { "id": "starboard_guns", "type": "guns", "side": "starboard", "x": 2, "y": 2, "w": 1, "h": 5 },
+      { "id": "hold", "type": "hold", "x": 0, "y": 7, "w": 3, "h": 1 },
+      { "id": "helm", "type": "helm", "x": 1, "y": 8, "w": 1, "h": 1 }
+    ]
+  }
+]

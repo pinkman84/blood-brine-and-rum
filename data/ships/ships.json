@@ -5,14 +5,6 @@
     "description": "Small, quick and cheap to run. Every pirate starts somewhere.",
     "max_hull": 30,
     "guns_per_side": 4,
-    "rooms": [
-      "helm",
-      "sails",
-      "port_guns",
-      "starboard_guns",
-      "magazine",
-      "sickbay"
-    ],
     "starting_gold": 20,
     "starting_crew": [
       "helmsman",
@@ -29,7 +21,8 @@
     "unlocked_at_start": true,
     "flag_color": "111111",
     "max_sails": 20,
-    "evasion": 0.15
+    "evasion": 0.15,
+    "layout": "sloop"
   },
   {
     "id": "brigantine",
@@ -37,15 +30,6 @@
     "description": "Heavier hull and more guns, but slower to come about.",
     "max_hull": 40,
     "guns_per_side": 6,
-    "rooms": [
-      "helm",
-      "sails",
-      "port_guns",
-      "starboard_guns",
-      "magazine",
-      "sickbay",
-      "hold"
-    ],
     "starting_gold": 10,
     "starting_crew": [
       "helmsman",
@@ -63,6 +47,7 @@
     },
     "unlocked_at_start": false,
     "max_sails": 24,
-    "evasion": 0.08
+    "evasion": 0.08,
+    "layout": "brigantine"
   }
 ]

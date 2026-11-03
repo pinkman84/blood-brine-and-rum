@@ -9,18 +9,20 @@
     "accuracy": 0.45,
     "gold_reward": 20,
     "min_sea": 1,
-    "rooms": [
-      "helm",
-      "sails",
-      "guns",
-      "hold",
-      "hold"
-    ],
     "hull_color": "5a4636",
     "sail_color": "f2efe6",
     "flag_color": "b03a2e",
     "max_sails": 14,
-    "evasion": 0.05
+    "evasion": 0.05,
+    "layout": "brigantine",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "gunner",
+      "sailor",
+      "sailor",
+      "carpenter"
+    ]
   },
   {
     "id": "rival_sloop",
@@ -32,17 +34,19 @@
     "accuracy": 0.45,
     "gold_reward": 12,
     "min_sea": 1,
-    "rooms": [
-      "helm",
-      "sails",
-      "guns",
-      "magazine"
-    ],
     "hull_color": "4b3a2a",
     "sail_color": "cfc4a8",
     "flag_color": "1a1a1a",
     "max_sails": 18,
-    "evasion": 0.15
+    "evasion": 0.15,
+    "layout": "sloop",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "gunner",
+      "sailor",
+      "boarder"
+    ]
   },
   {
     "id": "navy_cutter",
@@ -50,21 +54,23 @@
     "faction": "navy",
     "max_hull": 30,
     "guns_per_side": 4,
-    "reload_time": 10,
+    "reload_time": 13,
     "accuracy": 0.55,
     "gold_reward": 18,
     "min_sea": 2,
-    "rooms": [
-      "helm",
-      "sails",
-      "guns",
-      "guns",
-      "magazine"
-    ],
     "hull_color": "34495e",
     "sail_color": "ffffff",
     "flag_color": "2e4a8a",
     "max_sails": 20,
-    "evasion": 0.1
+    "evasion": 0.1,
+    "layout": "sloop",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "gunner",
+      "gunner",
+      "sailor",
+      "carpenter"
+    ]
   }
 ]

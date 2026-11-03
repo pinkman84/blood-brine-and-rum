@@ -3,7 +3,7 @@ extends RefCounted
 ## One ship's state during a battle: hull, sails, guns, reload and ammo.
 ## Built from the run (player) or from data/enemies (enemy).
 
-const BASE_RELOAD := 10.0  # seconds with 2 gunners; more gunners reload faster
+const BASE_RELOAD := 10.0  # seconds with a full gun crew (gun_factor 1)
 const PLAYER_ACCURACY := 0.55
 ## Ammo whose effects work so far. The rest show in the picker but are locked.
 const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot"]
@@ -18,6 +18,9 @@ var guns := 0
 var reload_time := BASE_RELOAD
 var accuracy := PLAYER_ACCURACY
 var reload := 0.0  # seconds of loading done
+## Set each frame from the crew at their stations (see battle_screen.gd).
+var gun_factor := 1.0  # reload speed; 0 = guns unmanned
+var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
 var auto_fire := false
 var unlimited_ammo := false
@@ -34,8 +37,6 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.max_sails = run.max_sails
 	s.base_evasion = float(ship.get("evasion", 0.1))
 	s.guns = int(ship.get("guns_per_side", 4))
-	var gunners := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "gunner").size()
-	s.reload_time = clampf(BASE_RELOAD * 2.0 / maxf(1.0, gunners), 4.0, 16.0)
 	s.ammo = run.ammo.duplicate()
 	return s
 
@@ -57,7 +58,7 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 
 func tick(delta: float) -> void:
 	if not is_loaded():
-		reload = minf(reload + delta, reload_time)
+		reload = minf(reload + delta * gun_factor, reload_time)
 
 
 func is_loaded() -> bool:
@@ -72,9 +73,9 @@ func sails_ratio() -> float:
 	return float(sails) / maxf(1.0, max_sails)
 
 
-## Dodge chance right now. Shredded sails leave a ship wallowing.
+## Dodge chance right now. Shredded sails or an empty helm leave a ship wallowing.
 func evasion() -> float:
-	return base_evasion * sails_ratio()
+	return base_evasion * sails_ratio() * helm_factor
 
 
 func shots_available() -> int:
