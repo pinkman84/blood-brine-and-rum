@@ -1,0 +1,42 @@
+[
+  {
+    "id": "floating_cargo",
+    "title": "Floating cargo",
+    "text": "Barrels bob in the swell, the wreck that spilled them nowhere in sight.",
+    "choices": [
+      {
+        "text": "Haul them aboard",
+        "outcomes": [
+          { "chance": 3, "text": "Good rum and better coin. +15 gold.", "effects": { "gold": 15 } },
+          { "chance": 1, "text": "One was a powder keg. It goes off against the hull. -5 hull.", "effects": { "hull": -5 } }
+        ]
+      },
+      {
+        "text": "Leave them be",
+        "outcomes": [
+          { "text": "You sail on. The crew grumbles.", "effects": {} }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fishing_village",
+    "title": "Fishing village",
+    "text": "A village of stilt houses. The headman offers timber for coin.",
+    "choices": [
+      {
+        "text": "Buy timber and patch the hull (10 gold)",
+        "outcomes": [
+          { "text": "Your carpenter gets to work. -10 gold, +8 hull.", "effects": { "gold": -10, "hull": 8 } }
+        ]
+      },
+      {
+        "text": "Trade stories over grog",
+        "outcomes": [
+          { "chance": 1, "text": "They point you to a sunken chest. +10 gold.", "effects": { "gold": 10 } },
+          { "chance": 2, "text": "Pleasant evening, nothing more.", "effects": {} }
+        ]
+      }
+    ]
+  }
+]

@@ -1,24 +1,92 @@
 extends Node
 ## Global game state. Autoloaded as `GameState` (see project.godot).
 ##
-## Tracks which screen the game is on and announces changes, so scenes
-## never need to know about each other. Run and save data will live here
-## or in sibling autoloads as Phase 0 continues.
+## Owns the current run and decides which screen is showing. Screens call
+## into here (start a run, finish a node, end the run) and never load each
+## other directly.
 
 enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER }
+
+const SCREEN_SCENES := {
+	Screen.MENU: "res://scenes/ui/menu.tscn",
+	Screen.SEA_MAP: "res://scenes/map/sea_map.tscn",
+	Screen.BATTLE: "res://scenes/battle/battle.tscn",
+	Screen.EVENT: "res://scenes/ui/event.tscn",
+	Screen.SHOP: "res://scenes/ui/shop.tscn",
+	Screen.GAME_OVER: "res://scenes/ui/game_over.tscn",
+}
+
+const STARTING_SHIP := "sloop"
 
 signal screen_changed(from: Screen, to: Screen)
 
 var current_screen: Screen = Screen.MENU
+var run: RunState = null
+var last_run_summary: Dictionary = {}
 
 
 func change_screen(to: Screen) -> void:
-	if to == current_screen:
-		return
 	var from := current_screen
 	current_screen = to
+	get_tree().change_scene_to_file(SCREEN_SCENES[to])
 	screen_changed.emit(from, to)
 
 
 func screen_name(screen: Screen) -> String:
 	return Screen.keys()[screen]
+
+
+func start_new_run() -> void:
+	run = RunState.new_run(Data.get_item("ships", STARTING_SHIP))
+	SaveSystem.add_meta("voyages", 1)
+	SaveSystem.save_meta()
+	SaveSystem.save_run(run)
+	change_screen(Screen.SEA_MAP)
+
+
+func continue_run() -> void:
+	run = SaveSystem.load_run()
+	change_screen(Screen.SEA_MAP if run != null else Screen.MENU)
+
+
+## Call when the player finishes a node. Moves on, saves, and returns to the map.
+func finish_node() -> void:
+	run.node_index += 1
+	if run.node_index >= RunState.NODES_PER_SEA:
+		run.node_index = 0
+		run.sea_number += 1
+		if run.sea_number > RunState.SEAS_PER_RUN:
+			end_run(true)
+			return
+	SaveSystem.save_run(run)
+	change_screen(Screen.SEA_MAP)
+
+
+func end_run(won: bool) -> void:
+	var doubloons := run.battles_won + (25 if won else 0)
+	last_run_summary = {
+		"won": won,
+		"sea_number": mini(run.sea_number, RunState.SEAS_PER_RUN),
+		"battles_won": run.battles_won,
+		"doubloons": doubloons,
+	}
+	SaveSystem.add_meta("doubloons", doubloons)
+	if won:
+		SaveSystem.add_meta("victories", 1)
+	SaveSystem.save_meta()
+	SaveSystem.delete_run()
+	run = null
+	change_screen(Screen.GAME_OVER)
+
+
+func save_and_quit_to_menu() -> void:
+	if run != null:
+		SaveSystem.save_run(run)
+	run = null
+	change_screen(Screen.MENU)
+
+
+# Save if the window is closed mid-run.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and run != null:
+		SaveSystem.save_run(run)

@@ -21,7 +21,34 @@ When you upgrade, update the version here and in `config/features` in `project.g
 
 1. Install Godot 4.7 (standard build, not .NET).
 2. Open Godot, choose **Import**, and select `project.godot` in this folder.
-3. Press F5. You should see the title, the engine version and "5 ammo types loaded".
+3. Press F5. The main menu opens. Start a voyage and click through the placeholder sea map, battles, events and trading posts. The Output panel lists how much content loaded from `data/`.
+
+## How the code fits together
+
+Three autoloads (always-loaded singletons, set in `project.godot`) hold the game together:
+
+| Autoload | Script | Job |
+| --- | --- | --- |
+| `Data` | `scripts/core/data_db.gd` | Loads every JSON file in `data/` at startup. `Data.get_item("ships", "sloop")`, `Data.get_all("events")`. |
+| `SaveSystem` | `scripts/core/save_system.gd` | Saves the run in progress and long-term progress. |
+| `GameState` | `scripts/core/game_state.gd` | Owns the current run and switches screens. Screens call it; they never load each other. |
+
+`RunState` (`scripts/core/run_state.gd`) is everything about the current voyage. Screens extend `ScreenBase` (`scripts/ui/screen_base.gd`), a placeholder layout that each later phase replaces with the real thing.
+
+## Saves
+
+Saves are JSON in Godot's user folder. On Windows that's `%APPDATA%\Godot\app_userdata\Blood, Brine & Rum\`.
+
+- `run.json` is the voyage in progress. It's written after every node and when the window closes, and deleted when the run ends.
+- `meta.json` keeps progress between runs: voyages, victories, doubloons, unlocks.
+
+Every save has a `save_version`. When the format changes, bump `SAVE_VERSION` in `save_system.gd` and add a step to `_migrate()`, so players' old saves keep working. Delete the files to reset progress while testing.
+
+## Adding content
+
+Each folder in `data/` is a category, and each `.json` file in it is an array of objects with a unique `id`. Drop in another file or add entries; no code change needed. JSON numbers load as decimals, so wrap them in `int()` in code.
+
+When exporting, add `*.json` to **Filters to export non-resource files** in the export preset, or the data won't be packed into the build.
 
 ## Display
 
