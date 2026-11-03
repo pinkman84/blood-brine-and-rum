@@ -7,7 +7,8 @@
     "crew_damage": 0,
     "sail_damage": 0,
     "fire_chance": 0.0,
-    "unlocked_at_start": true
+    "unlocked_at_start": true,
+    "unlimited": true
   },
   {
     "id": "chain_shot",
@@ -17,7 +18,8 @@
     "crew_damage": 0,
     "sail_damage": 3,
     "fire_chance": 0.0,
-    "unlocked_at_start": true
+    "unlocked_at_start": true,
+    "unlimited": false
   },
   {
     "id": "grape_shot",
@@ -27,7 +29,8 @@
     "crew_damage": 3,
     "sail_damage": 0,
     "fire_chance": 0.0,
-    "unlocked_at_start": true
+    "unlocked_at_start": true,
+    "unlimited": false
   },
   {
     "id": "heated_shot",
@@ -37,7 +40,8 @@
     "crew_damage": 0,
     "sail_damage": 0,
     "fire_chance": 0.4,
-    "unlocked_at_start": false
+    "unlocked_at_start": false,
+    "unlimited": false
   },
   {
     "id": "explosive_shell",
@@ -47,6 +51,7 @@
     "crew_damage": 1,
     "sail_damage": 0,
     "fire_chance": 0.15,
-    "unlocked_at_start": false
+    "unlocked_at_start": false,
+    "unlimited": false
   }
 ]

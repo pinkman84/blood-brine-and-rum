@@ -1,0 +1,47 @@
+[
+  {
+    "id": "company_merchantman",
+    "name": "Company merchantman",
+    "faction": "company",
+    "max_hull": 24,
+    "guns_per_side": 3,
+    "reload_time": 12,
+    "accuracy": 0.45,
+    "gold_reward": 20,
+    "min_sea": 1,
+    "rooms": ["helm", "sails", "guns", "hold", "hold"],
+    "hull_color": "5a4636",
+    "sail_color": "f2efe6",
+    "flag_color": "b03a2e"
+  },
+  {
+    "id": "rival_sloop",
+    "name": "Rival sloop",
+    "faction": "rivals",
+    "max_hull": 22,
+    "guns_per_side": 3,
+    "reload_time": 10,
+    "accuracy": 0.45,
+    "gold_reward": 12,
+    "min_sea": 1,
+    "rooms": ["helm", "sails", "guns", "magazine"],
+    "hull_color": "4b3a2a",
+    "sail_color": "cfc4a8",
+    "flag_color": "1a1a1a"
+  },
+  {
+    "id": "navy_cutter",
+    "name": "Navy cutter",
+    "faction": "navy",
+    "max_hull": 30,
+    "guns_per_side": 4,
+    "reload_time": 10,
+    "accuracy": 0.55,
+    "gold_reward": 18,
+    "min_sea": 2,
+    "rooms": ["helm", "sails", "guns", "guns", "magazine"],
+    "hull_color": "34495e",
+    "sail_color": "ffffff",
+    "flag_color": "2e4a8a"
+  }
+]
