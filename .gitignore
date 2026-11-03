@@ -1,0 +1,30 @@
+# Godot 4 editor cache and import data (rebuilt automatically)
+.godot/
+
+# Godot Android build template
+/android/
+
+# Exported game builds
+/builds/
+*.exe
+*.pck
+*.zip
+
+# Export presets can hold signing keys and passwords
+export_presets.cfg
+
+# Translations generated at import
+*.translation
+
+# Mono / C# (in case it is ever used)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS and editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.tmp
