@@ -1,0 +1,42 @@
+[
+  {
+    "id": "company",
+    "name": "The Honourable Trading Company",
+    "short_name": "the Company",
+    "description": "Merchant empire with its own navy. Main villain and final boss.",
+    "starting_reputation": -50,
+    "always_hostile": true
+  },
+  {
+    "id": "navy",
+    "name": "Royal Navy",
+    "short_name": "the Navy",
+    "description": "Law of the sea. Hostile to pirates, but can be bribed or offer a pardon.",
+    "starting_reputation": -25,
+    "always_hostile": false
+  },
+  {
+    "id": "brotherhood",
+    "name": "Pirate Brotherhood",
+    "short_name": "the Brotherhood",
+    "description": "Your side, as long as you keep the code. Runs the havens.",
+    "starting_reputation": 25,
+    "always_hostile": false
+  },
+  {
+    "id": "rivals",
+    "name": "Rival pirates",
+    "short_name": "rivals",
+    "description": "Competition. Can be duelled, robbed or recruited.",
+    "starting_reputation": 0,
+    "always_hostile": false
+  },
+  {
+    "id": "slavers",
+    "name": "Slavers",
+    "short_name": "slavers",
+    "description": "Always hostile. Free their captives for crew and Brotherhood favour.",
+    "starting_reputation": -100,
+    "always_hostile": true
+  }
+]

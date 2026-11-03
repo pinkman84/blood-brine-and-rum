@@ -1,0 +1,8 @@
+[
+  { "id": "gunner", "name": "Gunner", "station": "port_guns", "description": "Loads and fires the broadsides. Better gunners reload faster." },
+  { "id": "sailor", "name": "Sailor", "station": "sails", "description": "Works the rigging. Keeps the ship fast and able to flee." },
+  { "id": "helmsman", "name": "Helmsman", "station": "helm", "description": "Steers. Higher level makes coming about faster and safer." },
+  { "id": "carpenter", "name": "Carpenter", "station": "hull", "description": "Patches holes and repairs damaged rooms." },
+  { "id": "surgeon", "name": "Surgeon", "station": "sickbay", "description": "Heals wounded crew." },
+  { "id": "boarder", "name": "Boarder", "station": "deck", "description": "First across the rail in a boarding action." }
+]

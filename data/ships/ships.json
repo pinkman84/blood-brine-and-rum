@@ -1,0 +1,26 @@
+[
+  {
+    "id": "sloop",
+    "name": "Sloop",
+    "description": "Small, quick and cheap to run. Every pirate starts somewhere.",
+    "max_hull": 30,
+    "guns_per_side": 4,
+    "rooms": ["helm", "sails", "port_guns", "starboard_guns", "magazine", "sickbay"],
+    "starting_gold": 20,
+    "starting_crew": ["helmsman", "gunner", "gunner", "sailor", "carpenter"],
+    "starting_ammo": { "round_shot": 40, "chain_shot": 10, "grape_shot": 10 },
+    "unlocked_at_start": true
+  },
+  {
+    "id": "brigantine",
+    "name": "Brigantine",
+    "description": "Heavier hull and more guns, but slower to come about.",
+    "max_hull": 40,
+    "guns_per_side": 6,
+    "rooms": ["helm", "sails", "port_guns", "starboard_guns", "magazine", "sickbay", "hold"],
+    "starting_gold": 10,
+    "starting_crew": ["helmsman", "gunner", "gunner", "gunner", "sailor", "carpenter", "boarder"],
+    "starting_ammo": { "round_shot": 50, "chain_shot": 10, "grape_shot": 15 },
+    "unlocked_at_start": false
+  }
+]
