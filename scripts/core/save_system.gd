@@ -9,7 +9,7 @@ extends Node
 ## Every save carries a save_version. When the save format changes, bump
 ## SAVE_VERSION and add a step to _migrate() so old saves still load.
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 const RUN_PATH := "user://run.json"
 const META_PATH := "user://meta.json"
 
@@ -93,9 +93,13 @@ func _migrate(data: Dictionary) -> Dictionary:
 	var version := int(data.get("save_version", 1))
 	if version > SAVE_VERSION:
 		push_warning("Save: file is from a newer version of the game (%d > %d)" % [version, SAVE_VERSION])
-	# Add steps here as the format changes, e.g.:
-	# if version < 2:
-	#     data["new_field"] = default_value
-	#     version = 2
+	# One step per format change. Each brings a save up by one version.
+	if version < 2:
+		# v2 added sails to the run. Give old runs their ship's full sails.
+		if data.has("ship_id"):
+			var ship := Data.get_item("ships", str(data["ship_id"]))
+			data["max_sails"] = int(ship.get("max_sails", 20))
+			data["sails"] = data["max_sails"]
+		version = 2
 	data["save_version"] = version
 	return data

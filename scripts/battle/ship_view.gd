@@ -9,6 +9,11 @@ const ROOMS_RIGHT := 66.0
 const ROOM_TOP := -36.0
 const ROOM_BOTTOM := -8.0
 const MAX_HOLES := 40
+## The four sails, two per mast.
+const SAILS: Array[Rect2] = [
+	Rect2(-52, -120, 44, 30), Rect2(-48, -86, 36, 30),
+	Rect2(12, -120, 44, 30), Rect2(16, -86, 36, 30),
+]
 
 var hull_color := Color("6b4a2f")
 var trim_color := Color("8a6440")
@@ -17,8 +22,13 @@ var sail_color := Color("e8dfc8")
 var flag_color := Color("111111")
 var rooms: Array = []
 var base_position := Vector2.ZERO  # bobbing and sinking move around this
+var sails_ratio := 1.0:  # 0 = shredded, 1 = full; shortens the drawn sails
+	set(value):
+		sails_ratio = clampf(value, 0.0, 1.0)
+		queue_redraw()
 
 var _holes: Array[Vector2] = []
+var _sail_holes: Array[Vector2] = []
 var _time := randf() * TAU
 
 
@@ -39,8 +49,11 @@ func _draw() -> void:
 	var mast_color := Color("3b2a1a")
 	for mast_x: float in [-30.0, 34.0]:
 		draw_line(Vector2(mast_x, -40), Vector2(mast_x, -128), mast_color, 3.0)
-		draw_rect(Rect2(mast_x - 22, -120, 44, 30), sail_color)
-		draw_rect(Rect2(mast_x - 18, -86, 36, 30), sail_color)
+	var sail_height := lerpf(0.3, 1.0, sails_ratio)
+	for sail in SAILS:
+		draw_rect(Rect2(sail.position, Vector2(sail.size.x, roundf(sail.size.y * sail_height))), sail_color)
+	for hole in _sail_holes:
+		draw_circle(hole, 2.0, Color("3b3a36"))
 	draw_rect(Rect2(-44, -136, 14, 9), flag_color)
 
 	var hull := PackedVector2Array([
@@ -72,6 +85,20 @@ func muzzle_point(index: int, count: int) -> Vector2:
 ## A random point on the hull to land a hit, in local space.
 func random_hit_point() -> Vector2:
 	return Vector2(randf_range(-80, 85), randf_range(-44, -4))
+
+
+## A random point on the sails, for chain shot, in local space.
+func random_sail_point() -> Vector2:
+	var sail: Rect2 = SAILS.pick_random()
+	var height := sail.size.y * lerpf(0.3, 1.0, sails_ratio)
+	return Vector2(randf_range(sail.position.x + 3, sail.end.x - 3), randf_range(sail.position.y + 3, sail.position.y + height - 3))
+
+
+func add_sail_hole(local_point: Vector2) -> void:
+	_sail_holes.append(local_point.round())
+	if _sail_holes.size() > MAX_HOLES:
+		_sail_holes.pop_front()
+	queue_redraw()
 
 
 func add_hole(local_point: Vector2) -> void:

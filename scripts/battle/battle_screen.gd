@@ -11,6 +11,7 @@ const SKY_COLOR := Color("8fb3c9")
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
 const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
+const SAILOR_REPAIR := 5  # sails each sailor mends after a win
 
 var player: BattleShip
 var enemy: BattleShip
@@ -25,9 +26,11 @@ var _enemy_view: ShipView
 
 var _player_status: Label
 var _player_hull_bar: ProgressBar
+var _player_sails_bar: ProgressBar
 var _player_reload_bar: ProgressBar
 var _enemy_status: Label
 var _enemy_hull_bar: ProgressBar
+var _enemy_sails_bar: ProgressBar
 var _enemy_reload_bar: ProgressBar
 var _fire_button: Button
 var _auto_fire: CheckBox
@@ -92,25 +95,31 @@ func _pick_enemy(sea: int) -> Dictionary:
 
 
 func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view: ShipView) -> void:
-	var damage := shooter.damage_per_hit()
-	var hits := shooter.fire()
+	var ammo_id := shooter.selected_ammo
+	var high := BattleShip.aims_high(ammo_id)
+	var hits := shooter.fire(target.evasion())
 	var dir := signf(to_view.base_position.x - from_view.base_position.x)
 	for i in hits.size():
 		var from := from_view.transform * from_view.muzzle_point(i, hits.size())
 		var delay := i * 0.09
 		if hits[i]:
-			var local_hit := to_view.random_hit_point()
+			var local_hit := to_view.random_sail_point() if high else to_view.random_hit_point()
 			var to := to_view.transform * local_hit
-			_vfx.fire_shot(from, to, delay, _on_hit.bind(target, to_view, local_hit, damage))
+			_vfx.fire_shot(from, to, delay, _on_hit.bind(target, to_view, local_hit, ammo_id, high))
 		else:
 			var splash_at := Vector2(to_view.base_position.x - dir * randf_range(70.0, 120.0), WATER_Y + randf_range(2.0, 10.0))
 			_vfx.fire_shot(from, splash_at, delay, _vfx.splash.bind(splash_at))
 
 
-func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, damage: int) -> void:
-	target.take_damage(damage)
-	view.add_hole(local_hit)
-	_vfx.impact(view.transform * local_hit)
+func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: String, high: bool) -> void:
+	target.take_hit(ammo_id)
+	view.sails_ratio = target.sails_ratio()
+	if high:
+		view.add_sail_hole(local_hit)
+		_vfx.sail_hit(view.transform * local_hit)
+	else:
+		view.add_hole(local_hit)
+		_vfx.impact(view.transform * local_hit)
 	_check_end()
 	_refresh_ui()
 
@@ -144,11 +153,14 @@ func _show_victory() -> void:
 	var gold := int(_enemy_data.get("gold_reward", 10))
 	var carpenters := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "carpenter").size()
 	var repair := carpenters * CARPENTER_REPAIR
+	var sailors := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "sailor").size()
+	var mend := sailors * SAILOR_REPAIR
 	run.gold += gold
 	run.battles_won += 1
 	run.hull = mini(run.max_hull, player.hull + repair)
+	run.sails = mini(run.max_sails, player.sails + mend)
 	run.ammo = player.ammo
-	_show_result("The %s goes down!\n+%d gold. Carpenters patch %d hull." % [enemy.display_name, gold, repair],
+	_show_result("The %s goes down!\n+%d gold. Carpenters patch %d hull, sailors mend %d sails." % [enemy.display_name, gold, repair, mend],
 		"Return to the map", GameState.finish_node)
 
 
@@ -187,8 +199,8 @@ func _build_arena(run: RunState) -> void:
 	add_child(_arena)
 	_add_rect(_arena, SKY_COLOR, Vector2(-32, -32), Vector2(704, WATER_Y + 32))
 	_add_rect(_arena, WATER_COLOR, Vector2(-32, WATER_Y), Vector2(704, 160))
-	_player_view = _add_ship(Data.get_item("ships", run.ship_id), PLAYER_X, false)
-	_enemy_view = _add_ship(_enemy_data, ENEMY_X, true)
+	_player_view = _add_ship(Data.get_item("ships", run.ship_id), PLAYER_X, false, player)
+	_enemy_view = _add_ship(_enemy_data, ENEMY_X, true, enemy)
 	# A strip of water in front of the hulls so the ships sit in the sea.
 	_add_rect(_arena, Color(WATER_COLOR, 0.85), Vector2(-32, SHIP_Y - 4), Vector2(704, 160))
 	_vfx = BattleVfx.new()
@@ -205,9 +217,10 @@ func _add_rect(parent: Node, color: Color, pos: Vector2, size: Vector2) -> void:
 	parent.add_child(rect)
 
 
-func _add_ship(data: Dictionary, x: float, flipped: bool) -> ShipView:
+func _add_ship(data: Dictionary, x: float, flipped: bool, ship: BattleShip) -> ShipView:
 	var view := ShipView.new()
 	view.setup(data)
+	view.sails_ratio = ship.sails_ratio()
 	view.base_position = Vector2(x, SHIP_Y)
 	view.position = view.base_position
 	if flipped:
@@ -251,6 +264,7 @@ func _build_ui() -> void:
 	_add_label(left, player.display_name)
 	_player_status = _add_label(left, "")
 	_player_hull_bar = _add_bar(left, Color("c0392b"))
+	_player_sails_bar = _add_bar(left, Color("ecf0f1"))
 	_player_reload_bar = _add_bar(left, Color("f1c40f"))
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -263,6 +277,7 @@ func _build_ui() -> void:
 	_enemy_status = _add_label(right, "")
 	_enemy_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_enemy_hull_bar = _add_bar(right, Color("c0392b"))
+	_enemy_sails_bar = _add_bar(right, Color("ecf0f1"))
 	_enemy_reload_bar = _add_bar(right, Color("f1c40f"))
 
 	var spacer := Control.new()
@@ -344,8 +359,8 @@ func _fill_ammo_select() -> void:
 		var index := _ammo_select.item_count
 		_ammo_select.add_item("")
 		_ammo_select.set_item_metadata(index, ammo_id)
-		# Only round shot works until Phase 3 adds the special ammo effects.
-		_ammo_select.set_item_disabled(index, ammo_id != "round_shot")
+		# Ammo whose effects aren't built yet shows but can't be picked.
+		_ammo_select.set_item_disabled(index, not BattleShip.WORKING_AMMO.has(ammo_id))
 		if ammo_id == player.selected_ammo:
 			_ammo_select.select(index)
 
@@ -366,10 +381,14 @@ func _refresh_ui() -> void:
 	_player_status.text = _status_text(player)
 	_player_hull_bar.max_value = player.max_hull
 	_player_hull_bar.value = player.hull
+	_player_sails_bar.max_value = player.max_sails
+	_player_sails_bar.value = player.sails
 	_player_reload_bar.value = player.reload_ratio() * 100.0
 	_enemy_status.text = _status_text(enemy)
 	_enemy_hull_bar.max_value = enemy.max_hull
 	_enemy_hull_bar.value = enemy.hull
+	_enemy_sails_bar.max_value = enemy.max_sails
+	_enemy_sails_bar.value = enemy.sails
 	_enemy_reload_bar.value = enemy.reload_ratio() * 100.0
 
 	var ammo_name := str(Data.get_item("ammo", player.selected_ammo).get("name", player.selected_ammo))
@@ -394,4 +413,4 @@ func _refresh_ui() -> void:
 
 func _status_text(ship: BattleShip) -> String:
 	var guns := "Guns ready" if ship.is_loaded() else "Loading %d%%" % int(ship.reload_ratio() * 100.0)
-	return "Hull %d/%d   %s" % [ship.hull, ship.max_hull, guns]
+	return "Hull %d/%d   Sails %d/%d   %s" % [ship.hull, ship.max_hull, ship.sails, ship.max_sails, guns]

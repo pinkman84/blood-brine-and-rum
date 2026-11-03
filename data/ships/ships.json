@@ -27,7 +27,9 @@
       "grape_shot": 10
     },
     "unlocked_at_start": true,
-    "flag_color": "111111"
+    "flag_color": "111111",
+    "max_sails": 20,
+    "evasion": 0.15
   },
   {
     "id": "brigantine",
@@ -59,6 +61,8 @@
       "chain_shot": 10,
       "grape_shot": 15
     },
-    "unlocked_at_start": false
+    "unlocked_at_start": false,
+    "max_sails": 24,
+    "evasion": 0.08
   }
 ]
