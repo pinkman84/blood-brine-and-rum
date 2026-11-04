@@ -50,5 +50,16 @@
     "buffs": {
       "heal": 2.0
     }
+  },
+  {
+    "id": "boarding_master",
+    "name": "Boarding master",
+    "station": "hold",
+    "color": "9b59b6",
+    "description": "Leads boarding parties across the rail and stiffens the defence when you're boarded. Better grapple throws and rope cutting.",
+    "buffs": {
+      "boarding": 1.5,
+      "grapple": 1.4
+    }
   }
 ]

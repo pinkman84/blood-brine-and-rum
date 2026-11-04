@@ -20,7 +20,8 @@
       "carpenter"
     ],
     "max_hands": 120,
-    "flees_at": 0.35
+    "flees_at": 0.35,
+    "boards": false
   },
   {
     "id": "rival_sloop",
@@ -40,10 +41,12 @@
     "layout": "sloop",
     "crew": [
       "helmsman",
-      "gunner"
+      "gunner",
+      "boarding_master"
     ],
     "max_hands": 90,
-    "flees_at": 0.25
+    "flees_at": 0.25,
+    "boards": true
   },
   {
     "id": "navy_cutter",
@@ -66,9 +69,11 @@
       "gunner",
       "carpenter",
       "bosun",
-      "surgeon"
+      "surgeon",
+      "boarding_master"
     ],
     "max_hands": 110,
-    "flees_at": 0.0
+    "flees_at": 0.0,
+    "boards": true
   }
 ]

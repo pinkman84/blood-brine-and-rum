@@ -68,6 +68,11 @@ func sail_hit(pos: Vector2) -> void:
 	shake(1.5)
 
 
+## Steel and pistol flashes where boarders are fighting.
+func melee_clash(pos: Vector2) -> void:
+	_burst(pos, Color(1.0, 0.95, 0.7), 6, 0.25, Vector2(0, -1), 180.0, 40.0, Vector2.ZERO, 2.0, null, true)
+
+
 func splash(pos: Vector2) -> void:
 	_burst(pos, Color(0.9, 0.95, 1.0), 16, 0.7, Vector2(0, -1), 18.0, 110.0, Vector2(0, 320), 2.0, null, false)
 

@@ -37,6 +37,7 @@ var stalled := false
 var fleeing := false  # making sail to escape
 var escape := 0.0  # 0 to 1; at 1 she's away
 var flees_at := 0.0  # hull share at which an enemy captain runs (0 = never)
+var boards := false  # an enemy captain who likes to grapple and board
 var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
 var auto_fire := false
@@ -77,6 +78,7 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.hands = s.max_hands
 	s.unlimited_ammo = true
 	s.flees_at = float(data.get("flees_at", 0.0))
+	s.boards = bool(data.get("boards", false))
 	return s
 
 

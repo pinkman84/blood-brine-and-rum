@@ -19,10 +19,14 @@ extends Node
 ## goes on, faster with more canvas than the pursuer. Below a third of her
 ## sails a ship can't run at all, which is what chain shot is for.
 ##
+## Grappling and boarding live in boarding.gd: hooks pull the ships together
+## (better aim for both), all hooks fast lashes them alongside (guns silent,
+## no running or turning), then the grappler may board with a party of hands.
+##
 ## A ship that loses its hull sinks; one that loses all its hands strikes
 ## its colours. Controls: SPACE pause, F arm the next broadside, C come about,
-## R make sail, click a specialist then a room to move them, right-click to
-## deselect.
+## R make sail, G throw grapples or cut ropes, click a specialist then a room
+## to move them, right-click to deselect.
 
 const PLAYER_POS := Vector2(200, 200)
 const ENEMY_POS := Vector2(470, 200)
@@ -33,7 +37,14 @@ const MIN_FLEE_SAILS := 0.3  # below this share of sails a ship can't run
 const ESCAPE_DECAY := 0.02  # escape lost per second while she can't run
 const FLEE_DRIFT := 40.0  # pixels a fleeing ship pulls away by the time she escapes
 const HEATED_MISHAP := 0.12  # chance per heated-shot volley of a fire on your own gun deck
-const AI_TURN_AFTER_VOLLEY := 0.3  # chance the enemy comes about after firing, if the other side is ready
+const AI_TURN_AFTER_VOLLEY := 0.3
+const PULL_DISTANCE := 45.0  # pixels each ship moves inwards when fully lashed
+const PARTY_SIZES := [0.33, 0.5, 1.0]  # shares of your hands you can send across
+const PARTY_LABELS := ["a third", "half", "all hands"]
+const AI_BOARD_EDGE := 1.3  # an enemy who boards grapples when this much stronger in hands
+const AI_BOARD_DELAY := 1.5  # seconds an enemy captain waits once lashed before boarding
+const PRISONER_RANSOM := 2  # gold per prisoner at a trading post
+const DEBUG_BOARDING := true  # shows a "Lash now" test button (B key); set false to hide  # chance the enemy comes about after firing, if the other side is ready
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
 const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
@@ -70,6 +81,16 @@ var _enemy_reload_bar: ProgressBar
 var _enemy_reload_other: ProgressBar
 var _turn_button: Button
 var _flee_button: Button
+var _boarding := Boarding.new()
+var _ai_board_wait := 0.0
+var _boarding_row: HBoxContainer
+var _grapple_button: Button
+var _board_buttons: Array[Button] = []
+var _cut_loose_button: Button
+var _fall_back_button: Button
+var _debug_lash_button: Button
+var _choice_buttons: Array[Button] = []
+var _panel_column: VBoxContainer
 var _player_escape_bar: ProgressBar
 var _enemy_escape_bar: ProgressBar
 var _crew_buttons: Dictionary = {}  # BattleCrew -> Button
@@ -123,6 +144,11 @@ func _process(delta: float) -> void:
 	DamageControl.tick_crew(player, _player_view, player_crew, delta)
 	DamageControl.tick_crew(enemy, _enemy_view, enemy_crew, delta)
 	_report_deaths()
+	_boarding.tick(delta)
+	_tick_melee(delta)
+	if _over:
+		_refresh_ui()
+		return
 	_check_end()
 	if _over:
 		_refresh_ui()
@@ -138,9 +164,11 @@ func _process(delta: float) -> void:
 		_refresh_ui()
 		return
 	_enemy_think()
-	if player.can_fire() and (player.armed or player.auto_fire):
+	_enemy_board_think(delta)
+	var guns_free := not _boarding.guns_silent()
+	if guns_free and player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
-	if enemy.can_fire():
+	if guns_free and enemy.can_fire():
 		_fire(enemy, player, _enemy_view, _player_view)
 		if not enemy.turning and enemy.is_loaded(enemy.other_side()) and randf() < AI_TURN_AFTER_VOLLEY:
 			_come_about(enemy, _enemy_view, enemy_crew)
@@ -173,6 +201,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_turn_pressed()
 	elif key.keycode == KEY_R:
 		_on_flee_pressed()
+	elif key.keycode == KEY_G:
+		_on_grapple_pressed()
+	elif key.keycode == KEY_B and DEBUG_BOARDING:
+		_on_debug_lash_pressed()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -322,7 +354,8 @@ func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
 			if side == ship.engaged_side:
 				aim_bonus += c.buff("accuracy", 0.0)
 		ship.gun_factors[side] = hands * _room_efficiency(ship, view.gun_room(side)) * reload_buff * powder
-	ship.accuracy = ship.base_accuracy + aim_bonus
+	# Point-blank as the hooks draw the ships together: easier to hit.
+	ship.accuracy = ship.base_accuracy + aim_bonus + Boarding.CLOSE_ACCURACY * _boarding.closeness()
 
 	# Dodging: the helm's condition, specialists at the helm and in the rigging,
 	# and enough hands to work the sails (half as nimble with none).
@@ -351,7 +384,7 @@ func _pick_enemy(sea: int) -> Dictionary:
 ## Orders a ship to come about. Turn speed and the chance of stalling come
 ## from the helm's condition, the hands, and any helmsman at the helm.
 func _come_about(ship: BattleShip, view: ShipView, crew: Array) -> void:
-	if ship.turning:
+	if ship.turning or _boarding.is_lashed():
 		return
 	var helm_room: Dictionary = {}
 	for room in view.rooms:
@@ -394,15 +427,19 @@ func _enemy_think() -> void:
 
 ## Fills a fleeing ship's escape bar. `away` is the direction she pulls off in.
 func _tick_flight(ship: BattleShip, pursuer: BattleShip, view: ShipView, start_x: float, away: float, delta: float) -> void:
+	if _boarding.is_lashed():
+		ship.fleeing = false  # lashed alongside: nobody is going anywhere
+		ship.escape = 0.0
 	if ship.fleeing and not ship.turning:
 		if ship.sails_ratio() < MIN_FLEE_SAILS:
 			ship.escape = maxf(0.0, ship.escape - ESCAPE_DECAY * delta)
 		else:
 			var edge := clampf(ship.speed() / maxf(0.25, pursuer.speed()), 0.3, 2.0)
-			ship.escape = minf(1.0, ship.escape + edge / FLEE_TIME * delta)
+			var held := 1.0 - _boarding.closeness()  # hooks in her hold her back
+			ship.escape = minf(1.0, ship.escape + edge / FLEE_TIME * held * delta)
 	elif not ship.fleeing:
 		ship.escape = maxf(0.0, ship.escape - ESCAPE_DECAY * delta)
-	view.base_position.x = start_x + away * FLEE_DRIFT * ship.escape
+	view.base_position.x = start_x + away * FLEE_DRIFT * ship.escape - away * PULL_DISTANCE * _boarding.pull
 	if ship.escape >= 1.0 and not _over:
 		_over = true
 		_select(null)
@@ -417,12 +454,198 @@ func _tick_flight(ship: BattleShip, pursuer: BattleShip, view: ShipView, start_x
 func _on_flee_pressed() -> void:
 	if _over:
 		return
+	if _boarding.is_lashed():
+		_log("We're lashed to her! Cut loose first.")
+		return
 	if not player.fleeing and player.sails_ratio() < MIN_FLEE_SAILS:
 		_log("Not enough canvas left to run!")
 		return
 	player.fleeing = not player.fleeing
 	_log("All hands, make sail! We're running." if player.fleeing else "Belay that, we stand and fight!")
 	_refresh_ui()
+
+
+# --- Grappling and boarding ------------------------------------------------------
+
+## Product of a buff across every living specialist aboard (boarding skills
+## work wherever they stand).
+func _crew_buff(crew: Array, stat: String) -> float:
+	var total := 1.0
+	for c: BattleCrew in crew:
+		total *= c.buff(stat)
+	return total
+
+
+func _grapple_skill(ship: BattleShip, crew: Array) -> float:
+	return _crew_buff(crew, "grapple") * lerpf(0.5, 1.0, ship.hands_ratio())
+
+
+func _throw(ship: BattleShip) -> void:
+	var crew := player_crew if ship == player else enemy_crew
+	var result := _boarding.try_throw(ship, _grapple_skill(ship, crew))
+	var ours := ship == player
+	match result:
+		"missed":
+			_log("Grapple falls short!" if ours else "Their grapple splashes short.")
+		"hooked":
+			_log("Grapple's fast! %d of %d." % [_boarding.hooks, Boarding.HOOKS_NEEDED] if ours
+				else "They've got a hook in us! %d of %d. Cut it!" % [_boarding.hooks, Boarding.HOOKS_NEEDED])
+		"lashed":
+			player.turning = false
+			enemy.turning = false
+			_log("Lashed alongside! Guns fall silent. Choose your boarding party." if ours
+				else "They've lashed us alongside! Stand by to repel boarders!")
+			_ai_board_wait = AI_BOARD_DELAY
+
+
+func _cut(ship: BattleShip) -> void:
+	var crew := player_crew if ship == player else enemy_crew
+	var result := _boarding.try_cut(ship, _grapple_skill(ship, crew))
+	var ours := ship == player
+	match result:
+		"failed":
+			if ours:
+				_log("The rope holds!")
+		"cut":
+			_log("Rope cut! %d hooks left." % _boarding.hooks if ours else "They've cut a rope! %d hooks left." % _boarding.hooks)
+		"free":
+			_log("Cut loose! We're free of her." if ours else "They've cut themselves free!")
+
+
+func _on_grapple_pressed() -> void:
+	if _over or _boarding.state == "melee":
+		return
+	if _boarding.grappler == enemy or _boarding.state == "lashed":
+		_cut(player)
+	else:
+		_throw(player)
+	_refresh_ui()
+
+
+## Testing only: skip the grappling and lash the ships together right away.
+func _on_debug_lash_pressed() -> void:
+	if _over or _boarding.state == "melee":
+		return
+	_boarding.debug_lash(player)
+	player.turning = false
+	enemy.turning = false
+	_log("TEST: lashed alongside. Choose your boarding party.")
+	_refresh_ui()
+
+
+func _on_board_pressed(share: float) -> void:
+	if _boarding.state != "lashed" or _boarding.initiative != player or player.hands < 2:
+		return
+	var size := maxi(1, roundi(player.hands * share))
+	_boarding.start_melee(player, enemy, size)
+	_log("Away boarders! %d hands over the rail." % size)
+	_refresh_ui()
+
+
+func _on_fall_back_pressed() -> void:
+	if _boarding.state == "melee" and _boarding.attacker == player:
+		_boarding.fall_back()
+		_log("Fall back! Back to the ship!")
+		_refresh_ui()
+
+
+func _tick_melee(delta: float) -> void:
+	if _boarding.state != "melee":
+		return
+	var att := _boarding.attacker
+	var att_crew := player_crew if att == player else enemy_crew
+	var def_crew := enemy_crew if att == player else player_crew
+	var event := _boarding.tick_melee(delta, _crew_buff(att_crew, "boarding"), _crew_buff(def_crew, "boarding"))
+	if event == "":
+		return
+	# Boarding masters lead from the front on both sides, and get hurt doing it.
+	for c: BattleCrew in att_crew + def_crew:
+		if c.alive and c.buff("boarding") > 1.0:
+			c.hurt(Boarding.WOUND_PER_ROUND * randf_range(0.5, 1.5))
+	_report_deaths()
+	var mid := (_player_view.base_position + _enemy_view.base_position) / 2.0
+	for i in 3:
+		_vfx.melee_clash(mid + Vector2(randf_range(-20, 20), randf_range(-80, 80)))
+	var ours := att == player
+	match event:
+		"round":
+			_log("Boarding: %d of ours against %d of theirs." % [_boarding.party, _boarding.defender.hands] if ours
+				else "Repel boarders! %d of ours against %d of theirs." % [_boarding.defender.hands, _boarding.party])
+		"repelled":
+			_log("We're thrown back! Survivors return. They may counter-board!" if ours
+				else "Boarders repelled! Board them back, or cut loose.")
+			_ai_board_wait = AI_BOARD_DELAY
+		"taken":
+			_over = true
+			_select(null)
+			if ours:
+				_enemy_view.strike_colours()
+				get_tree().create_timer(1.0, false).timeout.connect(_show_boarding_victory.bind(enemy.hands))
+			else:
+				_player_view.strike_colours()
+				get_tree().create_timer(1.0, false).timeout.connect(_show_defeat.bind("Boarded and taken. Your ship is theirs."))
+
+
+## Enemy captains who like to board grapple when they have the bigger crew,
+## board as soon as they're lashed (if still stronger), and otherwise cut loose.
+func _enemy_board_think(delta: float) -> void:
+	var stronger := enemy.hands >= player.hands * AI_BOARD_EDGE
+	match _boarding.state:
+		"none", "grappling":
+			if _boarding.grappler == player:
+				if not enemy.boards or not stronger:
+					_cut(enemy)
+			elif enemy.boards and stronger and not enemy.fleeing:
+				_throw(enemy)
+		"lashed":
+			if _boarding.initiative != enemy:
+				# Our move. A captain who doesn't fancy a melee tries to cut free.
+				if not enemy.boards or not stronger:
+					_cut(enemy)
+				return
+			_ai_board_wait -= delta
+			if _ai_board_wait > 0.0:
+				return
+			if enemy.hands >= player.hands * 1.1:
+				var share := 0.75 if enemy.hands >= player.hands * 2.0 else 0.5
+				var size := maxi(1, roundi(enemy.hands * share))
+				_boarding.start_melee(enemy, player, size)
+				_log("Boarders! %d of them coming over the rail!" % size)
+			else:
+				_cut(enemy)
+
+
+## We took her by boarding. Her surviving hands are now our prisoners.
+func _show_boarding_victory(prisoners: int) -> void:
+	var run: RunState = GameState.run
+	var gold := roundi(int(_enemy_data.get("gold_reward", 10)) * STRUCK_GOLD)
+	var patched := _write_back(true)
+	run.gold += gold
+	run.battles_won += 1
+	var text := "The %s is ours! Taken by boarding.\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
+		enemy.display_name, gold, patched["repair"], patched["mend"], player.hands]
+	if not _fallen.is_empty():
+		text += "\nLost: " + ", ".join(_fallen) + "."
+	if prisoners <= 0:
+		_show_result(text, "Return to the map", GameState.finish_node)
+		return
+	text += "\n%d of her crew have surrendered. What's to be done with them?" % prisoners
+	var room := run.max_hands - run.hands
+	_show_choices(text, [
+		["Press %d into service" % mini(prisoners, room), _settle_prisoners.bind("press", prisoners)],
+		["Hold them for ransom (%d gold at port)" % (prisoners * PRISONER_RANSOM), _settle_prisoners.bind("ransom", prisoners)],
+		["Set them adrift", _settle_prisoners.bind("adrift", prisoners)],
+	])
+
+
+func _settle_prisoners(mode: String, count: int) -> void:
+	var run: RunState = GameState.run
+	match mode:
+		"press":
+			run.hands = mini(run.max_hands, run.hands + count)
+		"ransom":
+			run.prisoners += count
+	GameState.finish_node()
 
 
 func _on_turn_pressed() -> void:
@@ -485,7 +708,7 @@ func _check_end() -> void:
 		_over = true
 		_sink(_enemy_view)
 		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_victory.bind(false))
-	elif enemy.hands <= 0:
+	elif enemy.hands + _party_of(enemy) <= 0:
 		_over = true
 		_select(null)
 		_enemy_view.strike_colours()
@@ -494,11 +717,18 @@ func _check_end() -> void:
 		_over = true
 		_sink(_player_view)
 		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_defeat.bind("Your ship goes down with all hands."))
-	elif player.hands <= 0:
+	elif player.hands + _party_of(player) <= 0:
 		_over = true
 		_select(null)
 		_player_view.strike_colours()
 		get_tree().create_timer(1.0, false).timeout.connect(_show_defeat.bind("No hands left to fight her. You strike your colours."))
+
+
+## Hands a ship has away in a boarding party (they still count as hers).
+func _party_of(ship: BattleShip) -> int:
+	if _boarding.state == "melee" and _boarding.attacker == ship:
+		return _boarding.party
+	return 0
 
 
 func _sink(view: ShipView) -> void:
@@ -725,6 +955,22 @@ func _build_ui() -> void:
 		roster.add_child(button)
 		_crew_buttons[c] = button
 
+	# Boarding controls: only the ones that make sense right now are shown.
+	_boarding_row = HBoxContainer.new()
+	_boarding_row.add_theme_constant_override("separation", 8)
+	_boarding_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(_boarding_row)
+	_grapple_button = _add_order_button(_boarding_row, _on_grapple_pressed, 130)
+	for i in PARTY_SIZES.size():
+		_board_buttons.append(_add_order_button(_boarding_row, _on_board_pressed.bind(float(PARTY_SIZES[i])), 0))
+	_cut_loose_button = _add_order_button(_boarding_row, _on_grapple_pressed, 0)
+	_cut_loose_button.text = "Cut loose (G)"
+	_fall_back_button = _add_order_button(_boarding_row, _on_fall_back_pressed, 0)
+	_fall_back_button.text = "Fall back!"
+	_debug_lash_button = _add_order_button(_boarding_row, _on_debug_lash_pressed, 0)
+	_debug_lash_button.text = "TEST: lash now (B)"
+	_debug_lash_button.add_theme_color_override("font_color", Color("ff9f43"))
+
 	# Bottom: orders.
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 8)
@@ -755,7 +1001,7 @@ func _build_ui() -> void:
 	_auto_fire.focus_mode = Control.FOCUS_NONE
 	_auto_fire.toggled.connect(_on_auto_fire_toggled)
 	bottom.add_child(_auto_fire)
-	_add_label(bottom, "SPACE pause  F fire  C turn  R run")
+	_add_label(bottom, "SPACE pause  F fire  C turn  R run  G grapple")
 
 	_log_label = Label.new()
 	_log_label.add_theme_font_size_override("font_size", 12)
@@ -788,11 +1034,22 @@ func _build_ui() -> void:
 	var panel_column := VBoxContainer.new()
 	panel_column.add_theme_constant_override("separation", 8)
 	panel.add_child(panel_column)
+	_panel_column = panel_column
 	_result_label = _add_label(panel_column, "")
 	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_button = Button.new()
 	_result_button.focus_mode = Control.FOCUS_NONE
 	panel_column.add_child(_result_button)
+
+
+func _add_order_button(parent: Node, action: Callable, width: float) -> Button:
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_NONE
+	if width > 0.0:
+		button.custom_minimum_size = Vector2(width, 0)
+	button.pressed.connect(action)
+	parent.add_child(button)
+	return button
 
 
 func _vbox(parent: Node) -> VBoxContainer:
@@ -835,12 +1092,26 @@ func _fill_ammo_select() -> void:
 			_ammo_select.select(index)
 
 
+## Like _show_result, but with a choice of buttons: [[text, Callable], ...].
+func _show_choices(text: String, options: Array) -> void:
+	_show_result(text, "", Callable())
+	_result_button.visible = false
+	for option: Array in options:
+		var button := Button.new()
+		button.text = str(option[0])
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(option[1], CONNECT_ONE_SHOT)
+		_panel_column.add_child(button)
+		_choice_buttons.append(button)
+
+
 func _show_result(text: String, button_text: String, action: Callable) -> void:
 	get_tree().paused = false
 	_pause_label.visible = false
 	_result_label.text = text
 	_result_button.text = button_text
-	_result_button.pressed.connect(action, CONNECT_ONE_SHOT)
+	if action.is_valid():
+		_result_button.pressed.connect(action, CONNECT_ONE_SHOT)
 	_result_box.visible = true
 	_refresh_ui()
 
@@ -867,13 +1138,14 @@ func _refresh_ui() -> void:
 	_player_escape_bar.visible = player.escape > 0.0
 	_enemy_escape_bar.value = enemy.escape * 100.0
 	_enemy_escape_bar.visible = enemy.escape > 0.0
-	_flee_button.disabled = _over
+	_refresh_boarding_ui()
+	_flee_button.disabled = _over or _boarding.is_lashed()
 	if player.fleeing:
 		_flee_button.text = "Stand and fight"
 	else:
 		_flee_button.text = "Make sail (R)"
 
-	_turn_button.disabled = _over or player.turning
+	_turn_button.disabled = _over or player.turning or _boarding.is_lashed()
 	if player.turning and player.stall_left > 0.0:
 		_turn_button.text = "In irons!"
 	elif player.turning:
@@ -898,8 +1170,11 @@ func _refresh_ui() -> void:
 		(_crew_buttons[c] as Button).text = "%s %d%%  %s" % [c.crew_name, roundi(c.health), where]
 
 	var ammo_name := str(Data.get_item("ammo", player.selected_ammo).get("name", player.selected_ammo))
-	_fire_button.disabled = _over or player.auto_fire or player.shots_available() == 0 or player.turning
-	if player.turning:
+	_fire_button.disabled = _over or player.auto_fire or player.shots_available() == 0 or player.turning \
+		or _boarding.guns_silent()
+	if _boarding.guns_silent():
+		_fire_button.text = "Guns silent"
+	elif player.turning:
 		_fire_button.text = "Can't fire while turning"
 	elif player.shots_available() == 0:
 		_fire_button.text = "Out of %s" % ammo_name.to_lower()
@@ -919,6 +1194,29 @@ func _refresh_ui() -> void:
 			_ammo_select.set_item_text(i, "%s x%d" % [label, int(player.ammo.get(ammo_id, 0))])
 
 
+func _refresh_boarding_ui() -> void:
+	var b := _boarding
+	var hooks := "%d/%d" % [b.hooks, Boarding.HOOKS_NEEDED]
+	var our_turn_to_board := b.state == "lashed" and b.initiative == player
+	_grapple_button.visible = b.state == "none" or b.state == "grappling"
+	_grapple_button.disabled = _over or b.cooldown(player) > 0.0
+	if b.grappler == enemy:
+		_grapple_button.text = "Cut ropes (G) %s" % hooks
+	else:
+		_grapple_button.text = "Throw grapples (G) %s" % hooks
+	for i in _board_buttons.size():
+		var button := _board_buttons[i]
+		button.visible = our_turn_to_board
+		button.disabled = _over or player.hands < 2
+		button.text = "Board with %s (%d)" % [PARTY_LABELS[i], maxi(1, roundi(player.hands * float(PARTY_SIZES[i])))]
+	_cut_loose_button.visible = b.state == "lashed"
+	_cut_loose_button.disabled = _over or b.cooldown(player) > 0.0
+	_cut_loose_button.text = "Cut loose (G) %s" % hooks
+	_fall_back_button.visible = b.state == "melee" and b.attacker == player
+	_debug_lash_button.visible = DEBUG_BOARDING and b.state != "lashed" and b.state != "melee"
+	_debug_lash_button.disabled = _over
+
+
 func _status_text(ship: BattleShip) -> String:
 	var side := "Stbd" if ship.engaged_side == "starboard" else "Port"
 	var guns := "%s guns ready" % side
@@ -928,6 +1226,8 @@ func _status_text(ship: BattleShip) -> String:
 		guns = "%s guns out of action" % side if ship.gun_factor() <= 0.0 else "%s loading %d%%" % [side, int(ship.reload_ratio() * 100.0)]
 	if not ship.turning and ship.is_loaded(ship.other_side()):
 		guns += " (other side ready)"
+	if _boarding.guns_silent():
+		guns = "LASHED ALONGSIDE" if _boarding.state == "lashed" else "BOARDING ACTION"
 	if ship.fleeing:
 		guns += "  RUNNING %d%%" % roundi(ship.escape * 100.0)
 		if ship.sails_ratio() < MIN_FLEE_SAILS:

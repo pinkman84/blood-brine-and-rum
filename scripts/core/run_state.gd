@@ -20,6 +20,7 @@ var hands: int = 0  # general crew: a resource, not individuals
 var max_hands: int = 0
 var crew: Array[Dictionary] = []  # specialists, each { name, role, level, health, post? }
 var ammo: Dictionary = {}  # ammo id -> rounds
+var prisoners: int = 0  # held below for ransom at a trading post
 var battles_won: int = 0
 
 
@@ -65,6 +66,7 @@ func to_dict() -> Dictionary:
 		"max_hands": max_hands,
 		"crew": crew,
 		"ammo": ammo,
+		"prisoners": prisoners,
 		"battles_won": battles_won,
 	}
 
@@ -95,6 +97,7 @@ static func from_dict(data: Dictionary) -> RunState:
 	for ammo_id: Variant in saved_ammo:
 		run.ammo[str(ammo_id)] = int(saved_ammo[ammo_id])
 	run.battles_won = int(data.get("battles_won", 0))
+	run.prisoners = int(data.get("prisoners", 0))
 	return run
 
 
