@@ -15,14 +15,24 @@ extends Node
 ## the stern for double damage. A helmsman makes turns faster and less likely
 ## to stall halfway.
 ##
+## Either side can make sail to escape: an escape bar fills while the fight
+## goes on, faster with more canvas than the pursuer. Below a third of her
+## sails a ship can't run at all, which is what chain shot is for.
+##
 ## A ship that loses its hull sinks; one that loses all its hands strikes
 ## its colours. Controls: SPACE pause, F arm the next broadside, C come about,
-## click a specialist then a room to move them, right-click to deselect.
+## R make sail, click a specialist then a room to move them, right-click to
+## deselect.
 
 const PLAYER_POS := Vector2(200, 200)
 const ENEMY_POS := Vector2(470, 200)
 const BASE_TURN_TIME := 8.0  # seconds to come about with full hands and no helmsman
 const BASE_STALL_CHANCE := 0.3  # chance a turn hangs halfway without a helmsman
+const FLEE_TIME := 25.0  # seconds to escape when as fast as the pursuer
+const MIN_FLEE_SAILS := 0.3  # below this share of sails a ship can't run
+const ESCAPE_DECAY := 0.02  # escape lost per second while she can't run
+const FLEE_DRIFT := 40.0  # pixels a fleeing ship pulls away by the time she escapes
+const HEATED_MISHAP := 0.12  # chance per heated-shot volley of a fire on your own gun deck
 const AI_TURN_AFTER_VOLLEY := 0.3  # chance the enemy comes about after firing, if the other side is ready
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
@@ -59,6 +69,9 @@ var _enemy_sails_bar: ProgressBar
 var _enemy_reload_bar: ProgressBar
 var _enemy_reload_other: ProgressBar
 var _turn_button: Button
+var _flee_button: Button
+var _player_escape_bar: ProgressBar
+var _enemy_escape_bar: ProgressBar
 var _crew_buttons: Dictionary = {}  # BattleCrew -> Button
 var _crew_group := ButtonGroup.new()
 var _fire_button: Button
@@ -119,6 +132,11 @@ func _process(delta: float) -> void:
 	enemy.tick(delta)
 	_tick_turn(player, _player_view, delta)
 	_tick_turn(enemy, _enemy_view, delta)
+	_tick_flight(player, enemy, _player_view, PLAYER_POS.x, -1.0, delta)
+	_tick_flight(enemy, player, _enemy_view, ENEMY_POS.x, 1.0, delta)
+	if _over:
+		_refresh_ui()
+		return
 	_enemy_think()
 	if player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
@@ -153,6 +171,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_fire_pressed()
 	elif key.keycode == KEY_C:
 		_on_turn_pressed()
+	elif key.keycode == KEY_R:
+		_on_flee_pressed()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -359,11 +379,50 @@ func _tick_turn(ship: BattleShip, view: ShipView, delta: float) -> void:
 ## Enemy captains come about when the guns facing you are wrecked or out of
 ## action and the other side is ready (they also sometimes turn after a volley).
 func _enemy_think() -> void:
+	if not enemy.fleeing and enemy.flees_at > 0.0 and enemy.hull_ratio() <= enemy.flees_at \
+			and enemy.sails_ratio() >= MIN_FLEE_SAILS:
+		enemy.fleeing = true
+		_log("She's making sail to run! Chain shot her rigging!")
 	if enemy.turning or not enemy.is_loaded(enemy.other_side()):
 		return
 	var facing := _room_efficiency(enemy, _enemy_view.gun_room(enemy.engaged_side))
 	if facing <= 0.34 or enemy.gun_factor() <= 0.01:
 		_come_about(enemy, _enemy_view, enemy_crew)
+
+
+# --- Running away -----------------------------------------------------------
+
+## Fills a fleeing ship's escape bar. `away` is the direction she pulls off in.
+func _tick_flight(ship: BattleShip, pursuer: BattleShip, view: ShipView, start_x: float, away: float, delta: float) -> void:
+	if ship.fleeing and not ship.turning:
+		if ship.sails_ratio() < MIN_FLEE_SAILS:
+			ship.escape = maxf(0.0, ship.escape - ESCAPE_DECAY * delta)
+		else:
+			var edge := clampf(ship.speed() / maxf(0.25, pursuer.speed()), 0.3, 2.0)
+			ship.escape = minf(1.0, ship.escape + edge / FLEE_TIME * delta)
+	elif not ship.fleeing:
+		ship.escape = maxf(0.0, ship.escape - ESCAPE_DECAY * delta)
+	view.base_position.x = start_x + away * FLEE_DRIFT * ship.escape
+	if ship.escape >= 1.0 and not _over:
+		_over = true
+		_select(null)
+		var tween := _arena.create_tween()
+		tween.tween_property(view, "modulate:a", 0.0, 1.0)
+		if ship == player:
+			get_tree().create_timer(1.0, false).timeout.connect(_show_escape.bind(true))
+		else:
+			get_tree().create_timer(1.0, false).timeout.connect(_show_escape.bind(false))
+
+
+func _on_flee_pressed() -> void:
+	if _over:
+		return
+	if not player.fleeing and player.sails_ratio() < MIN_FLEE_SAILS:
+		_log("Not enough canvas left to run!")
+		return
+	player.fleeing = not player.fleeing
+	_log("All hands, make sail! We're running." if player.fleeing else "Belay that, we stand and fight!")
+	_refresh_ui()
 
 
 func _on_turn_pressed() -> void:
@@ -376,6 +435,15 @@ func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view
 	var ammo_id := shooter.selected_ammo
 	var high := BattleShip.aims_high(ammo_id)
 	var hits := shooter.fire(target.evasion())
+	if ammo_id == "heated_shot":
+		var crew := player_crew if shooter == player else enemy_crew
+		var careful := not _specialists_at(from_view, crew, "guns", shooter.engaged_side).is_empty()
+		if randf() < HEATED_MISHAP * (0.5 if careful else 1.0):
+			var deck := from_view.gun_room(shooter.engaged_side)
+			if not deck.is_empty():
+				DamageControl.ignite(shooter.rooms[deck["id"]])
+				if shooter == player:
+					_log("A hot shot rolls loose! Fire on the gun deck!")
 	var dir := signf(to_view.base_position.x - from_view.base_position.x)
 	for i in hits.size():
 		var from := from_view.transform * from_view.muzzle_point(shooter.engaged_side, i, hits.size())
@@ -449,13 +517,41 @@ func _show_victory(captured: bool) -> void:
 	var gold := int(_enemy_data.get("gold_reward", 10))
 	if captured:
 		gold = roundi(gold * STRUCK_GOLD)
+	var patched := _write_back(true)
+	run.gold += gold
+	run.battles_won += 1
+	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
+	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
+		gold, patched["repair"], patched["mend"], player.hands]
+	if not _fallen.is_empty():
+		text += "\nLost: " + ", ".join(_fallen) + "."
+	_show_result(text, "Return to the map", GameState.finish_node)
+
+
+## Someone got away. Nobody is paid and nothing is mended; the damage stays.
+func _show_escape(we_ran: bool) -> void:
+	_write_back(false)
+	var text := "You slip away under full sail." if we_ran else "The %s escapes into the haze." % enemy.display_name
+	text += "\nHull %d/%d. Hands left: %d." % [player.hull, player.max_hull, player.hands]
+	if not _fallen.is_empty():
+		text += "\nLost: " + ", ".join(_fallen) + "."
+	_show_result(text, "Return to the map", GameState.finish_node)
+
+
+## Saves the battle's results to the run: surviving specialists (with their
+## health and posts), hull, sails, hands and ammo. After a win, carpenters
+## patch the hull, the hands and bosuns mend sails, and the wounded recover.
+func _write_back(won: bool) -> Dictionary:
+	var run: RunState = GameState.run
 	var survivors := player_crew.filter(func(c: BattleCrew) -> bool: return c.alive)
-	var carpenters := survivors.filter(func(c: BattleCrew) -> bool: return c.role == "carpenter").size()
-	var repair := carpenters * CARPENTER_REPAIR
-	var bosuns := survivors.filter(func(c: BattleCrew) -> bool: return c.role == "bosun").size()
-	var mend := HANDS_MEND + bosuns * BOSUN_MEND
-	var has_surgeon := survivors.any(func(c: BattleCrew) -> bool: return c.role == "surgeon")
-	var recovery := HEAL_AFTER_BATTLE + (SURGEON_AFTER_BATTLE if has_surgeon else 0)
+	var repair := 0
+	var mend := 0
+	var recovery := 0
+	if won:
+		repair = survivors.filter(func(c: BattleCrew) -> bool: return c.role == "carpenter").size() * CARPENTER_REPAIR
+		mend = HANDS_MEND + survivors.filter(func(c: BattleCrew) -> bool: return c.role == "bosun").size() * BOSUN_MEND
+		var has_surgeon := survivors.any(func(c: BattleCrew) -> bool: return c.role == "surgeon")
+		recovery = HEAL_AFTER_BATTLE + (SURGEON_AFTER_BATTLE if has_surgeon else 0)
 	var kept: Array[Dictionary] = []
 	for c: BattleCrew in survivors:
 		c.heal(recovery)
@@ -463,17 +559,11 @@ func _show_victory(captured: bool) -> void:
 		c.source["post"] = c.room_id  # they start the next battle here
 		kept.append(c.source)
 	run.crew = kept
-	run.gold += gold
-	run.battles_won += 1
 	run.hull = mini(run.max_hull, player.hull + repair)
 	run.sails = mini(run.max_sails, player.sails + mend)
 	run.hands = player.hands
 	run.ammo = player.ammo
-	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
-	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [gold, repair, mend, player.hands]
-	if not _fallen.is_empty():
-		text += "\nLost: " + ", ".join(_fallen) + "."
-	_show_result(text, "Return to the map", GameState.finish_node)
+	return {"repair": repair, "mend": mend}
 
 
 ## Announces specialists who died since the last check, on both ships.
@@ -600,6 +690,7 @@ func _build_ui() -> void:
 	_player_sails_bar = _add_bar(left, Color("ecf0f1"))
 	_player_reload_bar = _add_bar(left, Color("f1c40f"))
 	_player_reload_other = _add_bar(left, Color("8a7a2a"))
+	_player_escape_bar = _add_bar(left, Color("5dade2"))
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -613,6 +704,7 @@ func _build_ui() -> void:
 	_enemy_sails_bar = _add_bar(right, Color("ecf0f1"))
 	_enemy_reload_bar = _add_bar(right, Color("f1c40f"))
 	_enemy_reload_other = _add_bar(right, Color("8a7a2a"))
+	_enemy_escape_bar = _add_bar(right, Color("5dade2"))
 
 	# Left: the crew roster. Click a name to select, then click a room.
 	var middle := HBoxContainer.new()
@@ -648,6 +740,11 @@ func _build_ui() -> void:
 	_turn_button.custom_minimum_size = Vector2(110, 0)
 	_turn_button.pressed.connect(_on_turn_pressed)
 	bottom.add_child(_turn_button)
+	_flee_button = Button.new()
+	_flee_button.focus_mode = Control.FOCUS_NONE
+	_flee_button.custom_minimum_size = Vector2(90, 0)
+	_flee_button.pressed.connect(_on_flee_pressed)
+	bottom.add_child(_flee_button)
 	_ammo_select = OptionButton.new()
 	_ammo_select.focus_mode = Control.FOCUS_NONE
 	_fill_ammo_select()
@@ -658,7 +755,7 @@ func _build_ui() -> void:
 	_auto_fire.focus_mode = Control.FOCUS_NONE
 	_auto_fire.toggled.connect(_on_auto_fire_toggled)
 	bottom.add_child(_auto_fire)
-	_add_label(bottom, "SPACE pause  F fire  C turn")
+	_add_label(bottom, "SPACE pause  F fire  C turn  R run")
 
 	_log_label = Label.new()
 	_log_label.add_theme_font_size_override("font_size", 12)
@@ -766,6 +863,16 @@ func _refresh_ui() -> void:
 	_enemy_reload_bar.value = enemy.reload_ratio() * 100.0
 	_enemy_reload_other.value = enemy.reload_ratio(enemy.other_side()) * 100.0
 
+	_player_escape_bar.value = player.escape * 100.0
+	_player_escape_bar.visible = player.escape > 0.0
+	_enemy_escape_bar.value = enemy.escape * 100.0
+	_enemy_escape_bar.visible = enemy.escape > 0.0
+	_flee_button.disabled = _over
+	if player.fleeing:
+		_flee_button.text = "Stand and fight"
+	else:
+		_flee_button.text = "Make sail (R)"
+
 	_turn_button.disabled = _over or player.turning
 	if player.turning and player.stall_left > 0.0:
 		_turn_button.text = "In irons!"
@@ -821,6 +928,10 @@ func _status_text(ship: BattleShip) -> String:
 		guns = "%s guns out of action" % side if ship.gun_factor() <= 0.0 else "%s loading %d%%" % [side, int(ship.reload_ratio() * 100.0)]
 	if not ship.turning and ship.is_loaded(ship.other_side()):
 		guns += " (other side ready)"
+	if ship.fleeing:
+		guns += "  RUNNING %d%%" % roundi(ship.escape * 100.0)
+		if ship.sails_ratio() < MIN_FLEE_SAILS:
+			guns += " (no canvas!)"
 	var trouble := DamageControl.alerts(ship)
 	if trouble != "":
 		guns += "  " + trouble.to_upper()

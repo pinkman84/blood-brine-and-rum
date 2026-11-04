@@ -5,6 +5,8 @@ const REPAIR_AMOUNT := 5
 const REPAIR_COST := 10
 const CHAIN_SHOT_AMOUNT := 5
 const CHAIN_SHOT_COST := 8
+const HEATED_AMOUNT := 5
+const HEATED_COST := 12
 const RECRUIT_AMOUNT := 10
 const RECRUIT_COST := 15
 const HIRE_COST := 40
@@ -20,6 +22,7 @@ func _title() -> String:
 func _build() -> void:
 	add_button("Repair %d hull (%d gold)" % [REPAIR_AMOUNT, REPAIR_COST], _repair)
 	add_button("Buy %d chain shot (%d gold)" % [CHAIN_SHOT_AMOUNT, CHAIN_SHOT_COST], _buy_chain_shot)
+	add_button("Buy %d heated shot (%d gold)" % [HEATED_AMOUNT, HEATED_COST], _buy_heated_shot)
 	add_button("Recruit %d hands (%d gold)" % [RECRUIT_AMOUNT, RECRUIT_COST], _recruit)
 	var roles: Array = Data.get_all("crew")
 	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
@@ -39,6 +42,15 @@ func _repair() -> void:
 		return
 	run.gold -= REPAIR_COST
 	run.hull = mini(run.max_hull, run.hull + REPAIR_AMOUNT)
+	refresh()
+
+
+func _buy_heated_shot() -> void:
+	var run: RunState = GameState.run
+	if run.gold < HEATED_COST:
+		return
+	run.gold -= HEATED_COST
+	run.ammo["heated_shot"] = int(run.ammo.get("heated_shot", 0)) + HEATED_AMOUNT
 	refresh()
 
 

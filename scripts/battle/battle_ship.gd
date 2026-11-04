@@ -9,7 +9,7 @@ const STALL_TIME := 3.0  # seconds stuck halfway ("in irons") when a turn goes w
 const RAKE_MULTIPLIER := 2  # hull and hands lost to a hit taken mid-turn
 const PLAYER_ACCURACY := 0.55
 ## Ammo whose effects work so far. The rest show in the picker but are locked.
-const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot", "grape_shot"]
+const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot", "grape_shot", "heated_shot"]
 
 var display_name := ""
 var hull := 0
@@ -34,6 +34,9 @@ var turn_progress := 0.0  # 0 to 1
 var will_stall := false
 var stall_left := 0.0
 var stalled := false
+var fleeing := false  # making sail to escape
+var escape := 0.0  # 0 to 1; at 1 she's away
+var flees_at := 0.0  # hull share at which an enemy captain runs (0 = never)
 var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
 var auto_fire := false
@@ -73,6 +76,7 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.max_hands = int(data.get("max_hands", 100))
 	s.hands = s.max_hands
 	s.unlimited_ammo = true
+	s.flees_at = float(data.get("flees_at", 0.0))
 	return s
 
 
@@ -153,6 +157,15 @@ func facing_angle() -> float:
 
 func hands_ratio() -> float:
 	return float(hands) / maxf(1.0, max_hands)
+
+
+func hull_ratio() -> float:
+	return float(hull) / maxf(1.0, max_hull)
+
+
+## How fast she can sail right now, for running and chasing.
+func speed() -> float:
+	return sails_ratio() * helm_factor
 
 
 func lose_hands(amount: int) -> void:
