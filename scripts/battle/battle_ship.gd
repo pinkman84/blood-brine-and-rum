@@ -3,7 +3,10 @@ extends RefCounted
 ## One ship's state during a battle: hull, sails, guns, reload and ammo.
 ## Built from the run (player) or from data/enemies (enemy).
 
-const BASE_RELOAD := 10.0  # seconds with a full gun crew (gun_factor 1)
+const BASE_RELOAD := 10.0  # seconds with a full gun crew (gun factor 1)
+const SIDES: Array[String] = ["starboard", "port"]
+const STALL_TIME := 3.0  # seconds stuck halfway ("in irons") when a turn goes wrong
+const RAKE_MULTIPLIER := 2  # hull and hands lost to a hit taken mid-turn
 const PLAYER_ACCURACY := 0.55
 ## Ammo whose effects work so far. The rest show in the picker but are locked.
 const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot", "grape_shot"]
@@ -20,9 +23,17 @@ var base_accuracy := PLAYER_ACCURACY
 var accuracy := PLAYER_ACCURACY  # base plus specialist bonuses, set each frame
 var hands := 0
 var max_hands := 0
-var reload := 0.0  # seconds of loading done
-## Set each frame from the crew at their stations (see battle_screen.gd).
-var gun_factor := 1.0  # reload speed; 0 = guns unmanned
+## Each broadside loads on its own; only the side facing the enemy can fire.
+var engaged_side := "starboard"
+var reloads := {"starboard": 0.0, "port": 0.0}  # seconds of loading done
+## Set each frame from the hands, rooms and specialists (see battle_screen.gd).
+var gun_factors := {"starboard": 1.0, "port": 1.0}  # reload speed per side; 0 = out of action
+var turning := false
+var turn_time := 8.0
+var turn_progress := 0.0  # 0 to 1
+var will_stall := false
+var stall_left := 0.0
+var stalled := false
 var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
 var auto_fire := false
@@ -72,16 +83,72 @@ func init_rooms(view_rooms: Array[Dictionary]) -> void:
 
 
 func tick(delta: float) -> void:
-	if not is_loaded():
-		reload = minf(reload + delta * gun_factor, reload_time)
+	for side: String in SIDES:
+		reloads[side] = minf(float(reloads[side]) + delta * float(gun_factors[side]), reload_time)
 
 
-func is_loaded() -> bool:
-	return reload >= reload_time
+func other_side() -> String:
+	return "port" if engaged_side == "starboard" else "starboard"
 
 
-func reload_ratio() -> float:
-	return reload / reload_time
+## Is a broadside loaded? Defaults to the side facing the enemy.
+func is_loaded(side := "") -> bool:
+	return float(reloads[side if side != "" else engaged_side]) >= reload_time
+
+
+func reload_ratio(side := "") -> float:
+	return float(reloads[side if side != "" else engaged_side]) / reload_time
+
+
+func gun_factor(side := "") -> float:
+	return float(gun_factors[side if side != "" else engaged_side])
+
+
+func can_fire() -> bool:
+	return not turning and is_loaded() and shots_available() > 0
+
+
+# --- Coming about -----------------------------------------------------------
+
+## Starts turning to bring the other broadside to bear. Returns false if
+## already turning.
+func start_turn(time: float, stall_chance: float) -> bool:
+	if turning:
+		return false
+	turning = true
+	turn_time = maxf(1.0, time)
+	turn_progress = 0.0
+	will_stall = randf() < stall_chance
+	stalled = false
+	stall_left = 0.0
+	return true
+
+
+## Advances a turn. Returns "stalled" or "done" when those happen, else "".
+func tick_turn(delta: float) -> String:
+	if not turning:
+		return ""
+	if stall_left > 0.0:
+		stall_left -= delta
+		return ""
+	if will_stall and not stalled and turn_progress >= 0.5:
+		stalled = true
+		stall_left = STALL_TIME
+		return "stalled"
+	turn_progress = minf(1.0, turn_progress + delta / turn_time)
+	if turn_progress >= 1.0:
+		turning = false
+		engaged_side = other_side()
+		return "done"
+	return ""
+
+
+## The ship's rotation: 0 with starboard facing the enemy, PI with port.
+func facing_angle() -> float:
+	var base := 0.0 if engaged_side == "starboard" else PI
+	if turning:
+		base += PI * smoothstep(0.0, 1.0, turn_progress)
+	return base
 
 
 func hands_ratio() -> float:
@@ -96,9 +163,11 @@ func sails_ratio() -> float:
 	return float(sails) / maxf(1.0, max_sails)
 
 
-## Dodge chance right now. Shredded sails or an empty helm leave a ship wallowing.
+## Dodge chance right now. Shredded sails, a wrecked helm or a turn in
+## progress leave a ship wallowing.
 func evasion() -> float:
-	return base_evasion * sails_ratio() * helm_factor
+	var e := base_evasion * sails_ratio() * helm_factor
+	return e * 0.5 if turning else e
 
 
 func shots_available() -> int:
@@ -117,7 +186,7 @@ func fire(target_evasion: float) -> Array[bool]:
 		hits.append(randf() < hit_chance)
 	if not unlimited_ammo and not is_free_ammo(selected_ammo):
 		ammo[selected_ammo] = int(ammo.get(selected_ammo, 0)) - shots
-	reload = 0.0
+	reloads[engaged_side] = 0.0
 	armed = false
 	return hits
 
@@ -127,12 +196,16 @@ static func is_free_ammo(ammo_id: String) -> bool:
 	return bool(Data.get_item("ammo", ammo_id).get("unlimited", false))
 
 
-## Applies one hit of the given ammo type.
-func take_hit(ammo_id: String) -> void:
+## Applies one hit of the given ammo type. A ship caught mid-turn shows her
+## stern, and a raking shot does double hull and crew damage. Returns true if
+## the hit raked her.
+func take_hit(ammo_id: String) -> bool:
 	var a := Data.get_item("ammo", ammo_id)
-	hull = maxi(0, hull - int(a.get("hull_damage", 1)))
+	var mult := RAKE_MULTIPLIER if turning else 1
+	hull = maxi(0, hull - int(a.get("hull_damage", 1)) * mult)
 	sails = maxi(0, sails - int(a.get("sail_damage", 0)))
-	lose_hands(roundi(float(a.get("crew_damage", 0)) * randf_range(0.5, 1.5)))
+	lose_hands(roundi(float(a.get("crew_damage", 0)) * randf_range(0.5, 1.5)) * mult)
+	return turning
 
 
 ## True if this ammo mostly hits rigging rather than the hull.

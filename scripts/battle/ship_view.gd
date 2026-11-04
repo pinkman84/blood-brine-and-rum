@@ -95,7 +95,7 @@ func _draw() -> void:
 		draw_rect(rect, wall_color, false, 2.0)
 		if room["type"] == "guns":
 			_draw_gun_ports(rect, hw if room["side"] == "starboard" else -hw)
-		if scale.x > 0:  # letters would be mirrored on a flipped ship
+		if scale.x > 0 and absf(rotation) < 0.1:  # letters would read mirrored or upside down
 			draw_string(font, rect.position + Vector2(3, 9), ROOM_LETTERS.get(room["type"], "?"),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 1, 1, 0.35))
 
@@ -166,11 +166,12 @@ func half_width() -> float:
 	return _grid.x / 2.0 + HULL_MARGIN
 
 
-## Where gun `index` of `count` fires from on the starboard side, in local space.
-func muzzle_point(index: int, count: int) -> Vector2:
-	var rect := gun_room("starboard").get("rect", Rect2()) as Rect2
+## Where gun `index` of `count` on `side` fires from, in local space.
+func muzzle_point(side: String, index: int, count: int) -> Vector2:
+	var rect := gun_room(side).get("rect", Rect2()) as Rect2
 	var y := lerpf(rect.position.y + 6, rect.end.y - 6, (index + 0.5) / maxf(1.0, count))
-	return Vector2(half_width() + 2, y)
+	var x := half_width() + 2
+	return Vector2(x if side == "starboard" else -x, y)
 
 
 ## A random point inside a random room, for a hit, in local space.

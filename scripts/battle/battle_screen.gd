@@ -9,13 +9,21 @@ extends Node
 ## speeds reloads and improves aim, a helmsman at the helm adds dodge, a
 ## carpenter doubles damage-control work in their room.
 ##
+## Each broadside reloads on its own, but only the side facing the enemy can
+## fire. Coming about swings the ship round to bring the other side to bear:
+## no firing while turning, dodge is halved, and a hit taken mid-turn rakes
+## the stern for double damage. A helmsman makes turns faster and less likely
+## to stall halfway.
+##
 ## A ship that loses its hull sinks; one that loses all its hands strikes
-## its colours. Controls: SPACE pause, F arm the next broadside, click a
-## specialist then a room to move them, right-click to deselect.
+## its colours. Controls: SPACE pause, F arm the next broadside, C come about,
+## click a specialist then a room to move them, right-click to deselect.
 
 const PLAYER_POS := Vector2(200, 200)
 const ENEMY_POS := Vector2(470, 200)
-const ENGAGED_SIDE := "starboard"  # the side facing the enemy (until come about)
+const BASE_TURN_TIME := 8.0  # seconds to come about with full hands and no helmsman
+const BASE_STALL_CHANCE := 0.3  # chance a turn hangs halfway without a helmsman
+const AI_TURN_AFTER_VOLLEY := 0.3  # chance the enemy comes about after firing, if the other side is ready
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
 const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
@@ -44,10 +52,13 @@ var _player_status: Label
 var _player_hull_bar: ProgressBar
 var _player_sails_bar: ProgressBar
 var _player_reload_bar: ProgressBar
+var _player_reload_other: ProgressBar
 var _enemy_status: Label
 var _enemy_hull_bar: ProgressBar
 var _enemy_sails_bar: ProgressBar
 var _enemy_reload_bar: ProgressBar
+var _enemy_reload_other: ProgressBar
+var _turn_button: Button
 var _crew_buttons: Dictionary = {}  # BattleCrew -> Button
 var _crew_group := ButtonGroup.new()
 var _fire_button: Button
@@ -69,7 +80,8 @@ func _ready() -> void:
 	_enemy_data = _pick_enemy(run.sea_number)
 	player = BattleShip.from_run(run, ship_data)
 	enemy = BattleShip.from_enemy(_enemy_data)
-	enemy.reload = randf() * 3.0  # so the first volleys don't land together
+	for side: String in BattleShip.SIDES:  # so the first volleys don't land together
+		enemy.reloads[side] = randf() * 3.0
 	_build_arena(ship_data)
 	player.init_rooms(_player_view.rooms)
 	enemy.init_rooms(_enemy_view.rooms)
@@ -105,10 +117,15 @@ func _process(delta: float) -> void:
 	_update_stations()
 	player.tick(delta)
 	enemy.tick(delta)
-	if player.is_loaded() and (player.armed or player.auto_fire) and player.shots_available() > 0:
+	_tick_turn(player, _player_view, delta)
+	_tick_turn(enemy, _enemy_view, delta)
+	_enemy_think()
+	if player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
-	if enemy.is_loaded():
+	if enemy.can_fire():
 		_fire(enemy, player, _enemy_view, _player_view)
+		if not enemy.turning and enemy.is_loaded(enemy.other_side()) and randf() < AI_TURN_AFTER_VOLLEY:
+			_come_about(enemy, _enemy_view, enemy_crew)
 	_refresh_ui()
 
 
@@ -134,6 +151,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_pause()
 	elif key.keycode == KEY_F:
 		_on_fire_pressed()
+	elif key.keycode == KEY_C:
+		_on_turn_pressed()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -184,7 +203,7 @@ func _place_crew(view: ShipView, members: Array) -> Array:
 
 func _station_room(view: ShipView, station: String, crew: Array) -> Dictionary:
 	if station == "guns":
-		var guns := view.gun_room(ENGAGED_SIDE)
+		var guns := view.gun_room("starboard")  # every battle starts starboard side on
 		if not guns.is_empty() and _free_cell(view, guns, crew, null) != null:
 			return guns
 	for room in view.rooms:
@@ -268,18 +287,21 @@ func _update_stations() -> void:
 func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
 	var hands := ship.hands_ratio()
 
-	# Guns: hands load them; the gun deck's condition and a master gunner matter.
-	var gunners := _specialists_at(view, crew, "guns", ENGAGED_SIDE)
-	var reload_buff := 1.0
-	var aim_bonus := 0.0
-	for c: BattleCrew in gunners:
-		reload_buff *= c.buff("reload")
-		aim_bonus += c.buff("accuracy", 0.0)
-	ship.gun_factor = hands * _room_efficiency(ship, view.gun_room(ENGAGED_SIDE)) * reload_buff
-	# A damaged magazine slows the powder supply: down to half speed when wrecked.
+	# Guns: hands load both broadsides; each gun deck's condition and any master
+	# gunner standing in it matter. A damaged magazine slows the powder supply,
+	# down to half speed when wrecked. Aim comes from gunners on the side firing.
+	var powder := 1.0
 	for room in view.rooms:
 		if room["type"] == "magazine":
-			ship.gun_factor *= lerpf(0.5, 1.0, _room_efficiency(ship, room))
+			powder *= lerpf(0.5, 1.0, _room_efficiency(ship, room))
+	var aim_bonus := 0.0
+	for side: String in BattleShip.SIDES:
+		var reload_buff := 1.0
+		for c: BattleCrew in _specialists_at(view, crew, "guns", side):
+			reload_buff *= c.buff("reload")
+			if side == ship.engaged_side:
+				aim_bonus += c.buff("accuracy", 0.0)
+		ship.gun_factors[side] = hands * _room_efficiency(ship, view.gun_room(side)) * reload_buff * powder
 	ship.accuracy = ship.base_accuracy + aim_bonus
 
 	# Dodging: the helm's condition, specialists at the helm and in the rigging,
@@ -304,13 +326,59 @@ func _pick_enemy(sea: int) -> Dictionary:
 	return options.pick_random()
 
 
+# --- Coming about -----------------------------------------------------------
+
+## Orders a ship to come about. Turn speed and the chance of stalling come
+## from the helm's condition, the hands, and any helmsman at the helm.
+func _come_about(ship: BattleShip, view: ShipView, crew: Array) -> void:
+	if ship.turning:
+		return
+	var helm_room: Dictionary = {}
+	for room in view.rooms:
+		if room["type"] == "helm":
+			helm_room = room
+	var turn_buff := 1.0
+	for c: BattleCrew in _specialists_at(view, crew, "helm"):
+		turn_buff *= c.buff("turn")
+	var speed := turn_buff * lerpf(0.5, 1.0, ship.hands_ratio()) * maxf(0.25, _room_efficiency(ship, helm_room))
+	var stall_chance := BASE_STALL_CHANCE / (1.0 + (turn_buff - 1.0) * 4.0)
+	ship.start_turn(BASE_TURN_TIME / speed, stall_chance)
+	if ship == player:
+		_log("Hands to the braces! Coming about.")
+
+
+func _tick_turn(ship: BattleShip, view: ShipView, delta: float) -> void:
+	var event := ship.tick_turn(delta)
+	view.rotation = ship.facing_angle()
+	if event == "stalled":
+		_log("We're in irons!" if ship == player else "She's hung up in irons! Rake her!")
+	elif event == "done" and ship == player:
+		_log("%s guns bearing." % ship.engaged_side.capitalize())
+
+
+## Enemy captains come about when the guns facing you are wrecked or out of
+## action and the other side is ready (they also sometimes turn after a volley).
+func _enemy_think() -> void:
+	if enemy.turning or not enemy.is_loaded(enemy.other_side()):
+		return
+	var facing := _room_efficiency(enemy, _enemy_view.gun_room(enemy.engaged_side))
+	if facing <= 0.34 or enemy.gun_factor() <= 0.01:
+		_come_about(enemy, _enemy_view, enemy_crew)
+
+
+func _on_turn_pressed() -> void:
+	if not _over:
+		_come_about(player, _player_view, player_crew)
+		_refresh_ui()
+
+
 func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view: ShipView) -> void:
 	var ammo_id := shooter.selected_ammo
 	var high := BattleShip.aims_high(ammo_id)
 	var hits := shooter.fire(target.evasion())
 	var dir := signf(to_view.base_position.x - from_view.base_position.x)
 	for i in hits.size():
-		var from := from_view.transform * from_view.muzzle_point(i, hits.size())
+		var from := from_view.transform * from_view.muzzle_point(shooter.engaged_side, i, hits.size())
 		var delay := i * 0.09
 		if hits[i]:
 			var local_hit := to_view.random_sail_point() if high else to_view.random_hit_point()
@@ -322,7 +390,9 @@ func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view
 
 
 func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: String, high: bool) -> void:
-	target.take_hit(ammo_id)
+	if target.take_hit(ammo_id):
+		_vfx.shake(5.0)
+		_log("Raked! A shot down the length of the deck." if target == player else "You rake her stern!")
 	view.sails_ratio = target.sails_ratio()
 	if high:
 		view.add_sail_hole(local_hit)
@@ -367,7 +437,7 @@ func _sink(view: ShipView) -> void:
 	_select(null)
 	var tween := _arena.create_tween().set_parallel()
 	tween.tween_property(view, "scale", view.scale * 0.8, SINK_TIME).set_ease(Tween.EASE_IN)
-	tween.tween_property(view, "rotation", 0.25 * signf(view.scale.x), SINK_TIME)
+	tween.tween_property(view, "rotation", view.rotation + 0.25 * signf(view.scale.x), SINK_TIME)
 	tween.tween_property(view, "modulate", Color(0.4, 0.5, 0.6, 0.0), SINK_TIME).set_ease(Tween.EASE_IN)
 	for i in 4:
 		var at := view.transform * view.random_hit_point()
@@ -529,6 +599,7 @@ func _build_ui() -> void:
 	_player_hull_bar = _add_bar(left, Color("c0392b"))
 	_player_sails_bar = _add_bar(left, Color("ecf0f1"))
 	_player_reload_bar = _add_bar(left, Color("f1c40f"))
+	_player_reload_other = _add_bar(left, Color("8a7a2a"))
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -541,6 +612,7 @@ func _build_ui() -> void:
 	_enemy_hull_bar = _add_bar(right, Color("c0392b"))
 	_enemy_sails_bar = _add_bar(right, Color("ecf0f1"))
 	_enemy_reload_bar = _add_bar(right, Color("f1c40f"))
+	_enemy_reload_other = _add_bar(right, Color("8a7a2a"))
 
 	# Left: the crew roster. Click a name to select, then click a room.
 	var middle := HBoxContainer.new()
@@ -571,6 +643,11 @@ func _build_ui() -> void:
 	_fire_button.custom_minimum_size = Vector2(150, 0)
 	_fire_button.pressed.connect(_on_fire_pressed)
 	bottom.add_child(_fire_button)
+	_turn_button = Button.new()
+	_turn_button.focus_mode = Control.FOCUS_NONE
+	_turn_button.custom_minimum_size = Vector2(110, 0)
+	_turn_button.pressed.connect(_on_turn_pressed)
+	bottom.add_child(_turn_button)
 	_ammo_select = OptionButton.new()
 	_ammo_select.focus_mode = Control.FOCUS_NONE
 	_fill_ammo_select()
@@ -581,7 +658,7 @@ func _build_ui() -> void:
 	_auto_fire.focus_mode = Control.FOCUS_NONE
 	_auto_fire.toggled.connect(_on_auto_fire_toggled)
 	bottom.add_child(_auto_fire)
-	_add_label(bottom, "SPACE pause  F fire  Click a specialist, then a room")
+	_add_label(bottom, "SPACE pause  F fire  C turn")
 
 	_log_label = Label.new()
 	_log_label.add_theme_font_size_override("font_size", 12)
@@ -680,12 +757,22 @@ func _refresh_ui() -> void:
 	_player_sails_bar.max_value = player.max_sails
 	_player_sails_bar.value = player.sails
 	_player_reload_bar.value = player.reload_ratio() * 100.0
+	_player_reload_other.value = player.reload_ratio(player.other_side()) * 100.0
 	_enemy_status.text = _status_text(enemy)
 	_enemy_hull_bar.max_value = enemy.max_hull
 	_enemy_hull_bar.value = enemy.hull
 	_enemy_sails_bar.max_value = enemy.max_sails
 	_enemy_sails_bar.value = enemy.sails
 	_enemy_reload_bar.value = enemy.reload_ratio() * 100.0
+	_enemy_reload_other.value = enemy.reload_ratio(enemy.other_side()) * 100.0
+
+	_turn_button.disabled = _over or player.turning
+	if player.turning and player.stall_left > 0.0:
+		_turn_button.text = "In irons!"
+	elif player.turning:
+		_turn_button.text = "Turning %d%%" % roundi(player.turn_progress * 100.0)
+	else:
+		_turn_button.text = "Come about (C)"
 
 	for c: BattleCrew in _crew_buttons:
 		var room := _player_view.room_by_id(c.room_id)
@@ -704,8 +791,10 @@ func _refresh_ui() -> void:
 		(_crew_buttons[c] as Button).text = "%s %d%%  %s" % [c.crew_name, roundi(c.health), where]
 
 	var ammo_name := str(Data.get_item("ammo", player.selected_ammo).get("name", player.selected_ammo))
-	_fire_button.disabled = _over or player.auto_fire or player.shots_available() == 0
-	if player.shots_available() == 0:
+	_fire_button.disabled = _over or player.auto_fire or player.shots_available() == 0 or player.turning
+	if player.turning:
+		_fire_button.text = "Can't fire while turning"
+	elif player.shots_available() == 0:
 		_fire_button.text = "Out of %s" % ammo_name.to_lower()
 	elif player.auto_fire:
 		_fire_button.text = "Auto-firing"
@@ -724,9 +813,14 @@ func _refresh_ui() -> void:
 
 
 func _status_text(ship: BattleShip) -> String:
-	var guns := "Guns ready"
-	if not ship.is_loaded():
-		guns = "Guns out of action" if ship.gun_factor <= 0.0 else "Loading %d%%" % int(ship.reload_ratio() * 100.0)
+	var side := "Stbd" if ship.engaged_side == "starboard" else "Port"
+	var guns := "%s guns ready" % side
+	if ship.turning:
+		guns = "COMING ABOUT"
+	elif not ship.is_loaded():
+		guns = "%s guns out of action" % side if ship.gun_factor() <= 0.0 else "%s loading %d%%" % [side, int(ship.reload_ratio() * 100.0)]
+	if not ship.turning and ship.is_loaded(ship.other_side()):
+		guns += " (other side ready)"
 	var trouble := DamageControl.alerts(ship)
 	if trouble != "":
 		guns += "  " + trouble.to_upper()
