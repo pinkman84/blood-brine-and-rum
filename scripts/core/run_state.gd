@@ -5,6 +5,7 @@ extends RefCounted
 
 const SEAS_PER_RUN := 5
 const NODES_PER_SEA := 7
+const START_HANDS := 0.8  # a run starts with this share of the ship's hands
 
 var run_seed: int = 0
 var ship_id: String = ""
@@ -15,7 +16,9 @@ var hull: int = 0
 var max_hull: int = 0
 var sails: int = 0
 var max_sails: int = 0
-var crew: Array[Dictionary] = []  # each: { name, role, level }
+var hands: int = 0  # general crew: a resource, not individuals
+var max_hands: int = 0
+var crew: Array[Dictionary] = []  # specialists, each { name, role, level, health, post? }
 var ammo: Dictionary = {}  # ammo id -> rounds
 var battles_won: int = 0
 
@@ -29,6 +32,8 @@ static func new_run(ship: Dictionary) -> RunState:
 	run.max_sails = int(ship.get("max_sails", 20))
 	run.sails = run.max_sails
 	run.gold = int(ship.get("starting_gold", 0))
+	run.max_hands = int(ship.get("max_hands", 100))
+	run.hands = roundi(run.max_hands * START_HANDS)
 	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run.run_seed
@@ -37,6 +42,7 @@ static func new_run(ship: Dictionary) -> RunState:
 			"name": str(names[rng.randi_range(0, names.size() - 1)]),
 			"role": str(role),
 			"level": 1,
+			"health": 100,
 		})
 	var start_ammo: Dictionary = ship.get("starting_ammo", {})
 	for ammo_id: Variant in start_ammo:
@@ -55,6 +61,8 @@ func to_dict() -> Dictionary:
 		"max_hull": max_hull,
 		"sails": sails,
 		"max_sails": max_sails,
+		"hands": hands,
+		"max_hands": max_hands,
 		"crew": crew,
 		"ammo": ammo,
 		"battles_won": battles_won,
@@ -72,9 +80,17 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.max_hull = int(data.get("max_hull", run.hull))
 	run.max_sails = int(data.get("max_sails", 20))
 	run.sails = int(data.get("sails", run.max_sails))
+	run.max_hands = int(data.get("max_hands", 100))
+	run.hands = int(data.get("hands", run.max_hands))
 	for member: Variant in data.get("crew", []):
 		var m: Dictionary = member
-		run.crew.append({"name": str(m.get("name", "")), "role": str(m.get("role", "")), "level": int(m.get("level", 1))})
+		run.crew.append({
+			"name": str(m.get("name", "")),
+			"role": str(m.get("role", "")),
+			"level": int(m.get("level", 1)),
+			"health": int(m.get("health", 100)),
+			"post": str(m.get("post", "")),
+		})
 	var saved_ammo: Dictionary = data.get("ammo", {})
 	for ammo_id: Variant in saved_ammo:
 		run.ammo[str(ammo_id)] = int(saved_ammo[ammo_id])

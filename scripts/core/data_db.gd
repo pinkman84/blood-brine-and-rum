@@ -8,7 +8,7 @@ extends Node
 ## Note: JSON numbers load as floats. Wrap them in int() where you need ints.
 
 const DATA_ROOT := "res://data"
-const CATEGORIES: Array[String] = ["ammo", "ships", "enemies", "crew", "names", "factions", "events"]
+const CATEGORIES: Array[String] = ["ammo", "ships", "enemies", "layouts", "crew", "names", "factions", "events"]
 
 var _tables: Dictionary = {}  # category -> { id -> Dictionary }
 
@@ -36,6 +36,11 @@ func get_item(category: String, id: String) -> Dictionary:
 		push_error("Data: no '%s' in %s" % [id, category])
 		return {}
 	return table[id]
+
+
+func has_item(category: String, id: String) -> bool:
+	var table: Dictionary = _tables.get(category, {})
+	return table.has(id)
 
 
 func count(category: String) -> int:

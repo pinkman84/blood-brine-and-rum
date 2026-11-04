@@ -1,8 +1,53 @@
 [
-  { "id": "gunner", "name": "Gunner", "station": "port_guns", "description": "Loads and fires the broadsides. Better gunners reload faster." },
-  { "id": "sailor", "name": "Sailor", "station": "sails", "description": "Works the rigging. Keeps the ship fast and able to flee." },
-  { "id": "helmsman", "name": "Helmsman", "station": "helm", "description": "Steers. Higher level makes coming about faster and safer." },
-  { "id": "carpenter", "name": "Carpenter", "station": "hull", "description": "Patches holes and repairs damaged rooms." },
-  { "id": "surgeon", "name": "Surgeon", "station": "sickbay", "description": "Heals wounded crew." },
-  { "id": "boarder", "name": "Boarder", "station": "deck", "description": "First across the rail in a boarding action." }
+  {
+    "id": "gunner",
+    "name": "Master gunner",
+    "station": "guns",
+    "color": "e74c3c",
+    "description": "At the guns facing the enemy, the hands reload faster and aim truer.",
+    "buffs": {
+      "reload": 1.3,
+      "accuracy": 0.1
+    }
+  },
+  {
+    "id": "helmsman",
+    "name": "Helmsman",
+    "station": "helm",
+    "color": "f1c40f",
+    "description": "At the helm, the ship dodges more. Later: faster, safer coming about.",
+    "buffs": {
+      "evasion": 1.3
+    }
+  },
+  {
+    "id": "carpenter",
+    "name": "Carpenter",
+    "station": "hold",
+    "color": "e67e22",
+    "description": "Hands in the same room repair, plug leaks and fight fires twice as fast. Patches hull after a win.",
+    "buffs": {
+      "work": 2.0
+    }
+  },
+  {
+    "id": "bosun",
+    "name": "Bosun",
+    "station": "sails",
+    "color": "3498db",
+    "description": "In the rigging, the ship dodges a little more. Mends sails after a win.",
+    "buffs": {
+      "evasion": 1.15
+    }
+  },
+  {
+    "id": "surgeon",
+    "name": "Surgeon",
+    "station": "sickbay",
+    "color": "2ecc71",
+    "description": "Heals wounded specialists in the sickbay.",
+    "buffs": {
+      "heal": 2.0
+    }
+  }
 ]
