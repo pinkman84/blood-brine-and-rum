@@ -6,7 +6,7 @@ extends RefCounted
 const BASE_RELOAD := 10.0  # seconds with a full gun crew (gun_factor 1)
 const PLAYER_ACCURACY := 0.55
 ## Ammo whose effects work so far. The rest show in the picker but are locked.
-const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot"]
+const WORKING_AMMO: Array[String] = ["round_shot", "chain_shot", "grape_shot"]
 
 var display_name := ""
 var hull := 0
@@ -16,7 +16,10 @@ var max_sails := 0
 var base_evasion := 0.0  # chance to dodge a shot with full sails
 var guns := 0
 var reload_time := BASE_RELOAD
-var accuracy := PLAYER_ACCURACY
+var base_accuracy := PLAYER_ACCURACY
+var accuracy := PLAYER_ACCURACY  # base plus specialist bonuses, set each frame
+var hands := 0
+var max_hands := 0
 var reload := 0.0  # seconds of loading done
 ## Set each frame from the crew at their stations (see battle_screen.gd).
 var gun_factor := 1.0  # reload speed; 0 = guns unmanned
@@ -26,6 +29,7 @@ var auto_fire := false
 var unlimited_ammo := false
 var ammo: Dictionary = {}  # ammo id -> rounds
 var selected_ammo := "round_shot"
+var rooms: Dictionary = {}  # room id -> damage, fire and flood state (see DamageControl)
 
 
 static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
@@ -37,6 +41,8 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.max_sails = run.max_sails
 	s.base_evasion = float(ship.get("evasion", 0.1))
 	s.guns = int(ship.get("guns_per_side", 4))
+	s.hands = run.hands
+	s.max_hands = run.max_hands
 	s.ammo = run.ammo.duplicate()
 	return s
 
@@ -51,9 +57,18 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.base_evasion = float(data.get("evasion", 0.05))
 	s.guns = int(data.get("guns_per_side", 3))
 	s.reload_time = float(data.get("reload_time", BASE_RELOAD))
-	s.accuracy = float(data.get("accuracy", 0.5))
+	s.base_accuracy = float(data.get("accuracy", 0.5))
+	s.accuracy = s.base_accuracy
+	s.max_hands = int(data.get("max_hands", 100))
+	s.hands = s.max_hands
 	s.unlimited_ammo = true
 	return s
+
+
+func init_rooms(view_rooms: Array[Dictionary]) -> void:
+	rooms.clear()
+	for room in view_rooms:
+		rooms[room["id"]] = DamageControl.new_room()
 
 
 func tick(delta: float) -> void:
@@ -67,6 +82,14 @@ func is_loaded() -> bool:
 
 func reload_ratio() -> float:
 	return reload / reload_time
+
+
+func hands_ratio() -> float:
+	return float(hands) / maxf(1.0, max_hands)
+
+
+func lose_hands(amount: int) -> void:
+	hands = maxi(0, hands - amount)
 
 
 func sails_ratio() -> float:
@@ -109,6 +132,7 @@ func take_hit(ammo_id: String) -> void:
 	var a := Data.get_item("ammo", ammo_id)
 	hull = maxi(0, hull - int(a.get("hull_damage", 1)))
 	sails = maxi(0, sails - int(a.get("sail_damage", 0)))
+	lose_hands(roundi(float(a.get("crew_damage", 0)) * randf_range(0.5, 1.5)))
 
 
 ## True if this ammo mostly hits rigging rather than the hull.

@@ -7,14 +7,29 @@
       {
         "text": "Haul them aboard",
         "outcomes": [
-          { "chance": 3, "text": "Good rum and better coin. +15 gold.", "effects": { "gold": 15 } },
-          { "chance": 1, "text": "One was a powder keg. It goes off against the hull. -5 hull.", "effects": { "hull": -5 } }
+          {
+            "chance": 3,
+            "text": "Good rum and better coin. +15 gold.",
+            "effects": {
+              "gold": 15
+            }
+          },
+          {
+            "chance": 1,
+            "text": "One was a powder keg. It goes off against the hull. -5 hull.",
+            "effects": {
+              "hull": -5
+            }
+          }
         ]
       },
       {
         "text": "Leave them be",
         "outcomes": [
-          { "text": "You sail on. The crew grumbles.", "effects": {} }
+          {
+            "text": "You sail on. The crew grumbles.",
+            "effects": {}
+          }
         ]
       }
     ]
@@ -27,14 +42,66 @@
       {
         "text": "Buy timber and patch the hull (10 gold)",
         "outcomes": [
-          { "text": "Your carpenter gets to work. -10 gold, +8 hull.", "effects": { "gold": -10, "hull": 8 } }
+          {
+            "text": "Your carpenter gets to work. -10 gold, +8 hull.",
+            "effects": {
+              "gold": -10,
+              "hull": 8
+            }
+          }
         ]
       },
       {
         "text": "Trade stories over grog",
         "outcomes": [
-          { "chance": 1, "text": "They point you to a sunken chest. +10 gold.", "effects": { "gold": 10 } },
-          { "chance": 2, "text": "Pleasant evening, nothing more.", "effects": {} }
+          {
+            "chance": 1,
+            "text": "They point you to a sunken chest. +10 gold.",
+            "effects": {
+              "gold": 10
+            }
+          },
+          {
+            "chance": 2,
+            "text": "Pleasant evening, nothing more.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "raft_survivors",
+    "title": "Survivors on a raft",
+    "text": "A makeshift raft, a torn sail for a flag, and a dozen sunburnt faces waving at you.",
+    "choices": [
+      {
+        "text": "Haul them aboard",
+        "outcomes": [
+          {
+            "chance": 3,
+            "text": "Grateful sailors, eager to sign on. +10 hands.",
+            "effects": {
+              "hands": 10
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Fever came aboard with them. +10 hands, but -10 gold for medicine.",
+            "effects": {
+              "hands": 10,
+              "gold": -10
+            }
+          }
+        ]
+      },
+      {
+        "text": "Toss them a water cask and sail on",
+        "outcomes": [
+          {
+            "text": "They curse your name as you leave.",
+            "effects": {}
+          }
         ]
       }
     ]

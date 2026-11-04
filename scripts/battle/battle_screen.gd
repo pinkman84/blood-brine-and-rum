@@ -1,11 +1,17 @@
 extends Node
 ## Battle: your ship and one enemy, seen from above, trade broadsides in
-## pausable real time. Crew at their stations drive the ship:
-##   gunners at the starboard guns -> reload speed
-##   helmsman at the helm          -> evasion (none at all if the helm is empty)
-##   sailors in the rigging        -> extra evasion
-## Controls: SPACE pause, F arm the next broadside, click a crew member then
-## a room to move them, right-click to deselect. Orders work while paused.
+## pausable real time.
+##
+## Hands (a number, not people you click) work the whole ship. The share of
+## hands left scales every timing: reloads, firefighting, plugging, repairs.
+## Specialists are the crew you move. Each buffs the hands in the room they
+## stand in (see "buffs" in data/crew): a master gunner at the engaged guns
+## speeds reloads and improves aim, a helmsman at the helm adds dodge, a
+## carpenter doubles damage-control work in their room.
+##
+## A ship that loses its hull sinks; one that loses all its hands strikes
+## its colours. Controls: SPACE pause, F arm the next broadside, click a
+## specialist then a room to move them, right-click to deselect.
 
 const PLAYER_POS := Vector2(200, 200)
 const ENEMY_POS := Vector2(470, 200)
@@ -13,9 +19,9 @@ const ENGAGED_SIDE := "starboard"  # the side facing the enemy (until come about
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
 const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
-const SAILOR_REPAIR := 5  # sails each sailor mends after a win
-const FULL_GUN_CREW := 2.0  # crew power that gives normal reload speed
-const UNSKILLED := 0.5  # how well crew work a station they aren't trained for
+const BOSUN_MEND := 5  # sails each bosun mends after a win
+const HANDS_MEND := 5  # sails the hands mend after a win anyway
+const STRUCK_GOLD := 1.5  # capturing a ship pays more than sinking it
 
 var player: BattleShip
 var enemy: BattleShip
@@ -59,6 +65,10 @@ func _ready() -> void:
 	enemy = BattleShip.from_enemy(_enemy_data)
 	enemy.reload = randf() * 3.0  # so the first volleys don't land together
 	_build_arena(ship_data)
+	player.init_rooms(_player_view.rooms)
+	enemy.init_rooms(_enemy_view.rooms)
+	_player_view.room_states = player.rooms
+	_enemy_view.room_states = enemy.rooms
 	player_crew = _place_crew(_player_view, run.crew)
 	enemy_crew = _place_crew(_enemy_view, _enemy_crew_entries())
 	_player_view.crew = player_crew
@@ -77,6 +87,12 @@ func _process(delta: float) -> void:
 		return
 	for c: BattleCrew in player_crew + enemy_crew:
 		c.step(delta)
+	DamageControl.tick(player, _player_view, player_crew, delta)
+	DamageControl.tick(enemy, _enemy_view, enemy_crew, delta)
+	_check_end()
+	if _over:
+		_refresh_ui()
+		return
 	_update_stations()
 	player.tick(delta)
 	enemy.tick(delta)
@@ -207,19 +223,23 @@ func _select(c: BattleCrew) -> void:
 		(_crew_buttons[c] as Button).button_pressed = true
 
 
-## How well a kind of station is worked: each crew member standing there adds
-## 1 if trained for it (0.5 if not), plus 10% per level above 1.
-func _station_power(view: ShipView, crew: Array, room_type: String, side := "") -> float:
-	var power := 0.0
+## Specialists standing (not walking) in a room of this type, on this side.
+func _specialists_at(view: ShipView, crew: Array, room_type: String, side := "") -> Array:
+	var found: Array = []
 	for c: BattleCrew in crew:
 		if not c.alive or c.is_moving():
 			continue
 		var room := view.room_by_id(c.room_id)
-		if room.get("type", "") != room_type or (side != "" and room.get("side", "") != side):
-			continue
-		var skill := 1.0 if c.station() == room_type else UNSKILLED
-		power += skill * (1.0 + 0.1 * (c.level - 1))
-	return power
+		if room.get("type", "") == room_type and (side == "" or room.get("side", "") == side):
+			found.append(c)
+	return found
+
+
+## How well a room works: its damage, fire and flooding.
+func _room_efficiency(ship: BattleShip, room: Dictionary) -> float:
+	if room.is_empty():
+		return 0.0
+	return DamageControl.efficiency(ship.rooms[room["id"]])
 
 
 func _update_stations() -> void:
@@ -228,10 +248,32 @@ func _update_stations() -> void:
 
 
 func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
-	ship.gun_factor = clampf(_station_power(view, crew, "guns", ENGAGED_SIDE) / FULL_GUN_CREW, 0.0, 2.0)
-	var helm := clampf(_station_power(view, crew, "helm"), 0.0, 1.0)
-	var rigging := clampf(_station_power(view, crew, "sails"), 0.0, 1.0)
-	ship.helm_factor = helm * (1.0 + 0.25 * rigging)
+	var hands := ship.hands_ratio()
+
+	# Guns: hands load them; the gun deck's condition and a master gunner matter.
+	var gunners := _specialists_at(view, crew, "guns", ENGAGED_SIDE)
+	var reload_buff := 1.0
+	var aim_bonus := 0.0
+	for c: BattleCrew in gunners:
+		reload_buff *= c.buff("reload")
+		aim_bonus += c.buff("accuracy", 0.0)
+	ship.gun_factor = hands * _room_efficiency(ship, view.gun_room(ENGAGED_SIDE)) * reload_buff
+	# A damaged magazine slows the powder supply: down to half speed when wrecked.
+	for room in view.rooms:
+		if room["type"] == "magazine":
+			ship.gun_factor *= lerpf(0.5, 1.0, _room_efficiency(ship, room))
+	ship.accuracy = ship.base_accuracy + aim_bonus
+
+	# Dodging: the helm's condition, specialists at the helm and in the rigging,
+	# and enough hands to work the sails (half as nimble with none).
+	var helm_room: Dictionary = {}
+	for room in view.rooms:
+		if room["type"] == "helm":
+			helm_room = room
+	var dodge_buff := 1.0
+	for c: BattleCrew in _specialists_at(view, crew, "helm") + _specialists_at(view, crew, "sails"):
+		dodge_buff *= c.buff("evasion")
+	ship.helm_factor = _room_efficiency(ship, helm_room) * dodge_buff * lerpf(0.5, 1.0, hands)
 
 
 # --- Combat ---------------------------------------------------------------
@@ -270,6 +312,10 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 	else:
 		view.add_hole(local_hit)
 		_vfx.impact(view.transform * local_hit)
+		var room := view.room_at(local_hit)
+		if not room.is_empty():
+			DamageControl.on_hit(target, room, ammo_id)
+	view.add_hands_lost(target.hands_ratio())
 	_check_end()
 	_refresh_ui()
 
@@ -280,11 +326,21 @@ func _check_end() -> void:
 	if enemy.hull <= 0:
 		_over = true
 		_sink(_enemy_view)
-		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_victory)
+		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_victory.bind(false))
+	elif enemy.hands <= 0:
+		_over = true
+		_select(null)
+		_enemy_view.strike_colours()
+		get_tree().create_timer(1.0, false).timeout.connect(_show_victory.bind(true))
 	elif player.hull <= 0:
 		_over = true
 		_sink(_player_view)
-		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_defeat)
+		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_defeat.bind("Your ship goes down with all hands."))
+	elif player.hands <= 0:
+		_over = true
+		_select(null)
+		_player_view.strike_colours()
+		get_tree().create_timer(1.0, false).timeout.connect(_show_defeat.bind("No hands left to fight her. You strike your colours."))
 
 
 func _sink(view: ShipView) -> void:
@@ -298,24 +354,28 @@ func _sink(view: ShipView) -> void:
 		get_tree().create_timer(i * 0.35, false).timeout.connect(_vfx.impact.bind(at))
 
 
-func _show_victory() -> void:
+func _show_victory(captured: bool) -> void:
 	var run: RunState = GameState.run
 	var gold := int(_enemy_data.get("gold_reward", 10))
+	if captured:
+		gold = roundi(gold * STRUCK_GOLD)
 	var carpenters := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "carpenter").size()
 	var repair := carpenters * CARPENTER_REPAIR
-	var sailors := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "sailor").size()
-	var mend := sailors * SAILOR_REPAIR
+	var bosuns := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "bosun").size()
+	var mend := HANDS_MEND + bosuns * BOSUN_MEND
 	run.gold += gold
 	run.battles_won += 1
 	run.hull = mini(run.max_hull, player.hull + repair)
 	run.sails = mini(run.max_sails, player.sails + mend)
+	run.hands = player.hands
 	run.ammo = player.ammo
-	_show_result("The %s goes down!\n+%d gold. Carpenters patch %d hull, sailors mend %d sails." % [enemy.display_name, gold, repair, mend],
+	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
+	_show_result((headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [gold, repair, mend, player.hands],
 		"Return to the map", GameState.finish_node)
 
 
-func _show_defeat() -> void:
-	_show_result("Your ship goes down with all hands.", "Abandon ship", GameState.end_run.bind(false))
+func _show_defeat(text: String) -> void:
+	_show_result(text, "Abandon ship", GameState.end_run.bind(false))
 
 
 # --- Controls -------------------------------------------------------------
@@ -458,7 +518,7 @@ func _build_ui() -> void:
 	_auto_fire.focus_mode = Control.FOCUS_NONE
 	_auto_fire.toggled.connect(_on_auto_fire_toggled)
 	bottom.add_child(_auto_fire)
-	_add_label(bottom, "SPACE pause  F fire  Click crew, then a room")
+	_add_label(bottom, "SPACE pause  F fire  Click a specialist, then a room")
 
 	_pause_label = Label.new()
 	_pause_label.text = "PAUSED"
@@ -554,7 +614,13 @@ func _refresh_ui() -> void:
 
 	for c: BattleCrew in _crew_buttons:
 		var room := _player_view.room_by_id(c.room_id)
-		var where := "moving" if c.is_moving() else str(room.get("id", "")).replace("_", " ")
+		var where := str(room.get("id", "")).replace("starboard", "stbd").replace("_", " ")
+		if c.is_moving():
+			where = "moving"
+		elif player.rooms.has(c.room_id):
+			var busy := DamageControl.job(player.rooms[c.room_id])
+			if busy != "":
+				where = busy
 		(_crew_buttons[c] as Button).text = "%s  %s" % [c.crew_name, where]
 
 	var ammo_name := str(Data.get_item("ammo", player.selected_ammo).get("name", player.selected_ammo))
@@ -580,6 +646,10 @@ func _refresh_ui() -> void:
 func _status_text(ship: BattleShip) -> String:
 	var guns := "Guns ready"
 	if not ship.is_loaded():
-		guns = "Guns unmanned" if ship.gun_factor <= 0.0 else "Loading %d%%" % int(ship.reload_ratio() * 100.0)
-	return "Hull %d/%d  Sails %d/%d  Dodge %d%%\n%s" % [
-		ship.hull, ship.max_hull, ship.sails, ship.max_sails, int(ship.evasion() * 100.0), guns]
+		guns = "Guns out of action" if ship.gun_factor <= 0.0 else "Loading %d%%" % int(ship.reload_ratio() * 100.0)
+	var trouble := DamageControl.alerts(ship)
+	if trouble != "":
+		guns += "  " + trouble.to_upper()
+	return "Hull %d/%d  Sails %d/%d  HANDS %d/%d\nDodge %d%%  %s" % [
+		ship.hull, ship.max_hull, ship.sails, ship.max_sails, ship.hands, ship.max_hands,
+		int(ship.evasion() * 100.0), guns]

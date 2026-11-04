@@ -38,6 +38,11 @@ func get_item(category: String, id: String) -> Dictionary:
 	return table[id]
 
 
+func has_item(category: String, id: String) -> bool:
+	var table: Dictionary = _tables.get(category, {})
+	return table.has(id)
+
+
 func count(category: String) -> int:
 	var table: Dictionary = _tables.get(category, {})
 	return table.size()

@@ -17,12 +17,9 @@
     "layout": "brigantine",
     "crew": [
       "helmsman",
-      "gunner",
-      "gunner",
-      "sailor",
-      "sailor",
       "carpenter"
-    ]
+    ],
+    "max_hands": 120
   },
   {
     "id": "rival_sloop",
@@ -30,7 +27,7 @@
     "faction": "rivals",
     "max_hull": 22,
     "guns_per_side": 3,
-    "reload_time": 10,
+    "reload_time": 12,
     "accuracy": 0.45,
     "gold_reward": 12,
     "min_sea": 1,
@@ -42,11 +39,9 @@
     "layout": "sloop",
     "crew": [
       "helmsman",
-      "gunner",
-      "gunner",
-      "sailor",
-      "boarder"
-    ]
+      "gunner"
+    ],
+    "max_hands": 90
   },
   {
     "id": "navy_cutter",
@@ -54,7 +49,7 @@
     "faction": "navy",
     "max_hull": 30,
     "guns_per_side": 4,
-    "reload_time": 13,
+    "reload_time": 12,
     "accuracy": 0.55,
     "gold_reward": 18,
     "min_sea": 2,
@@ -67,10 +62,9 @@
     "crew": [
       "helmsman",
       "gunner",
-      "gunner",
-      "gunner",
-      "sailor",
-      "carpenter"
-    ]
+      "carpenter",
+      "bosun"
+    ],
+    "max_hands": 110
   }
 ]

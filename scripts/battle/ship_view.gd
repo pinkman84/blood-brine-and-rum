@@ -24,6 +24,7 @@ var mast_ys: Array[float] = []
 var crew: Array = []  # BattleCrew, drawn on top of the decks
 var selected: BattleCrew = null
 var hover_room_id := ""
+var room_states: Dictionary = {}  # BattleShip.rooms: damage, fire, flood per room id
 var base_position := Vector2.ZERO  # bobbing and sinking move around this
 var sails_ratio := 1.0:  # 0 = shredded, 1 = full; shortens the drawn sails
 	set(value):
@@ -34,6 +35,7 @@ var _grid := Vector2.ZERO
 var _holes: Array[Vector2] = []
 var _sail_holes: Array[Vector2] = []
 var _time := randf() * TAU
+var _struck := false
 
 
 func setup(data: Dictionary) -> void:
@@ -87,6 +89,7 @@ func _draw() -> void:
 	for room in rooms:
 		var rect: Rect2 = room["rect"]
 		draw_rect(rect, floor_color)
+		_draw_room_state(rect, room_states.get(room["id"], {}))
 		if room["id"] == hover_room_id:
 			draw_rect(rect, Color(1, 1, 0.6, 0.18))
 		draw_rect(rect, wall_color, false, 2.0)
@@ -106,7 +109,7 @@ func _draw() -> void:
 	for hole in _sail_holes:
 		draw_circle(hole, 1.5, Color("3b3a36"))
 	if not mast_ys.is_empty():
-		draw_rect(Rect2(-4, mast_ys[0] - 12, 8, 5), flag_color)
+		draw_rect(Rect2(-4, mast_ys[0] - 12, 8, 5), Color.WHITE if _struck else flag_color)
 
 	for c: BattleCrew in crew:
 		if not c.alive:
@@ -115,6 +118,31 @@ func _draw() -> void:
 		draw_circle(c.pos, 3.0, c.color)
 		if c == selected:
 			draw_arc(c.pos, 6.5, 0, TAU, 16, Color.WHITE, 1.0)
+
+
+func _draw_room_state(rect: Rect2, state: Dictionary) -> void:
+	if state.is_empty():
+		return
+	var flood := float(state["flood"])
+	if flood > 0.0:
+		draw_rect(rect, Color(0.2, 0.45, 0.85, 0.6 * flood))
+	var damage := int(state["damage"])
+	if damage > 0:
+		draw_rect(rect, Color(0.6, 0.1, 0.05, 0.12 * damage))
+	for i in DamageControl.ROOM_HP:
+		var pip := Rect2(rect.end.x - 5 - i * 5, rect.end.y - 5, 3, 3)
+		draw_rect(pip, Color("e74c3c") if i < damage else Color(0, 0, 0, 0.4))
+	if state["leak"]:
+		var pulse := 1.5 + sin(_time * 6.0)
+		draw_circle(rect.position + Vector2(6, rect.size.y - 6), 2.0 + pulse * 0.5, Color("5dade2"))
+	var fire := float(state["fire"])
+	if fire > 0.0:
+		var size := lerpf(3.0, 7.0, fire / 100.0)
+		var centre := rect.get_center()
+		for k in 3:
+			var wobble := Vector2(sin(_time * 7.0 + k * 2.1), cos(_time * 5.0 + k * 1.7)) * 4.0
+			var offset := Vector2((k - 1) * 6.0, (k % 2) * 4.0 - 2.0)
+			draw_circle(centre + offset + wobble, size, Color(1.0, 0.35 + 0.25 * sin(_time * 9.0 + k), 0.05, 0.75))
 
 
 func _draw_gun_ports(rect: Rect2, x: float) -> void:
@@ -164,6 +192,16 @@ func room_by_id(id: String) -> Dictionary:
 	return {}
 
 
+## Rooms that share a wall with this one (fire spreads between them).
+func neighbours(id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var rect: Rect2 = room_by_id(id).get("rect", Rect2())
+	for room in rooms:
+		if room["id"] != id and rect.grow(1.0).intersects(room["rect"]):
+			result.append(room)
+	return result
+
+
 func room_at(local_point: Vector2) -> Dictionary:
 	for room in rooms:
 		if (room["rect"] as Rect2).has_point(local_point):
@@ -188,6 +226,17 @@ func crew_at(local_point: Vector2) -> BattleCrew:
 		if c.alive and c.pos.distance_to(local_point) <= 6.0:
 			return c
 	return null
+
+
+## The ship surrenders: the flag comes down and a white one goes up.
+func strike_colours() -> void:
+	_struck = true
+	modulate = Color(0.85, 0.85, 0.85)
+
+
+## Hook for showing crew losses on the ship. Nothing yet; 2c adds wounds.
+func add_hands_lost(_hands_ratio: float) -> void:
+	pass
 
 
 func add_hole(local_point: Vector2) -> void:

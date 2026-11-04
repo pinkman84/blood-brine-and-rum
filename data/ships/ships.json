@@ -9,8 +9,6 @@
     "starting_crew": [
       "helmsman",
       "gunner",
-      "gunner",
-      "sailor",
       "carpenter"
     ],
     "starting_ammo": {
@@ -22,7 +20,9 @@
     "flag_color": "111111",
     "max_sails": 20,
     "evasion": 0.15,
-    "layout": "sloop"
+    "layout": "sloop",
+    "max_hands": 100,
+    "specialist_slots": 8
   },
   {
     "id": "brigantine",
@@ -34,11 +34,8 @@
     "starting_crew": [
       "helmsman",
       "gunner",
-      "gunner",
-      "gunner",
-      "sailor",
       "carpenter",
-      "boarder"
+      "bosun"
     ],
     "starting_ammo": {
       "round_shot": 50,
@@ -48,6 +45,8 @@
     "unlocked_at_start": false,
     "max_sails": 24,
     "evasion": 0.08,
-    "layout": "brigantine"
+    "layout": "brigantine",
+    "max_hands": 140,
+    "specialist_slots": 8
   }
 ]

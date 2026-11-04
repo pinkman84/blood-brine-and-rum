@@ -2,7 +2,7 @@ extends ScreenBase
 ## Shows a random event from data/events and applies the chosen outcome.
 ## Phase 5 grows this into the full event system (requirements, crew checks).
 ##
-## Supported effects so far: gold, hull (both can be negative).
+## Supported effects so far: gold, hull, hands (all can be negative).
 
 var _event: Dictionary = {}
 var _result_text := ""
@@ -61,3 +61,4 @@ func _apply(effects: Dictionary) -> void:
 	var run: RunState = GameState.run
 	run.gold = maxi(0, run.gold + int(effects.get("gold", 0)))
 	run.hull = mini(run.max_hull, run.hull + int(effects.get("hull", 0)))
+	run.hands = clampi(run.hands + int(effects.get("hands", 0)), 0, run.max_hands)

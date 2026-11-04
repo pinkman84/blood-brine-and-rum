@@ -29,5 +29,12 @@ func station() -> String:
 	return str(Data.get_item("crew", role).get("station", "hold"))
 
 
+## This specialist's multiplier or bonus for a stat (from "buffs" in data/crew).
+## Multipliers default to 1, bonuses (like accuracy) to 0.
+func buff(stat: String, default := 1.0) -> float:
+	var buffs: Dictionary = Data.get_item("crew", role).get("buffs", {})
+	return float(buffs.get(stat, default))
+
+
 func role_name() -> String:
 	return str(Data.get_item("crew", role).get("name", role))

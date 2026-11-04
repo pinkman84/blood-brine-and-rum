@@ -71,8 +71,9 @@ func run_summary() -> String:
 	var run: RunState = GameState.run
 	if run == null:
 		return ""
-	return "Sea %d of %d   Node %d of %d\nGold %d   Hull %d/%d   Sails %d/%d   Crew %d" % [
+	return "Sea %d of %d   Node %d of %d\nGold %d   Hull %d/%d   Sails %d/%d\nHands %d/%d   Specialists %d" % [
 		run.sea_number, RunState.SEAS_PER_RUN,
 		run.node_index + 1, RunState.NODES_PER_SEA,
-		run.gold, run.hull, run.max_hull, run.sails, run.max_sails, run.crew.size(),
+		run.gold, run.hull, run.max_hull, run.sails, run.max_sails,
+		run.hands, run.max_hands, run.crew.size(),
 	]

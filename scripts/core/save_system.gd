@@ -9,7 +9,7 @@ extends Node
 ## Every save carries a save_version. When the save format changes, bump
 ## SAVE_VERSION and add a step to _migrate() so old saves still load.
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const RUN_PATH := "user://run.json"
 const META_PATH := "user://meta.json"
 
@@ -101,5 +101,18 @@ func _migrate(data: Dictionary) -> Dictionary:
 			data["max_sails"] = int(ship.get("max_sails", 20))
 			data["sails"] = data["max_sails"]
 		version = 2
+	if version < 3:
+		# v3 split crew into hands (a number) and specialists. Sailors and
+		# boarders became hands; give old runs 80% of their ship's hands.
+		if data.has("ship_id"):
+			var ship := Data.get_item("ships", str(data["ship_id"]))
+			data["max_hands"] = int(ship.get("max_hands", 100))
+			data["hands"] = roundi(int(data["max_hands"]) * RunState.START_HANDS)
+			var kept: Array = []
+			for member: Variant in data.get("crew", []):
+				if Data.has_item("crew", str((member as Dictionary).get("role", ""))):
+					kept.append(member)
+			data["crew"] = kept
+		version = 3
 	data["save_version"] = version
 	return data
