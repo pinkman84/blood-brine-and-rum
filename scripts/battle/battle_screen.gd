@@ -149,7 +149,8 @@ func _enemy_crew_entries() -> Array:
 	return entries
 
 
-## Puts each crew member at a free spot in their trained station, or anywhere free.
+## Puts each specialist back at the post they held at the end of the last
+## battle, or else at their trained station, or else anywhere free.
 func _place_crew(view: ShipView, members: Array) -> Array:
 	var placed: Array = []
 	for m: Dictionary in members:
@@ -160,7 +161,12 @@ func _place_crew(view: ShipView, members: Array) -> Array:
 		c.health = float(m.get("health", BattleCrew.MAX_HEALTH))
 		c.source = m
 		c.color = Color.from_string(str(Data.get_item("crew", c.role).get("color", "")), Color.WHITE)
-		var room := _station_room(view, c.station(), placed)
+		var room: Dictionary = {}
+		var post := view.room_by_id(str(m.get("post", "")))
+		if not post.is_empty() and _free_cell(view, post, placed, null) != null:
+			room = post
+		if room.is_empty():
+			room = _station_room(view, c.station(), placed)
 		if room.is_empty():
 			for r in view.rooms:
 				if _free_cell(view, r, placed, null) != null:
@@ -384,6 +390,7 @@ func _show_victory(captured: bool) -> void:
 	for c: BattleCrew in survivors:
 		c.heal(recovery)
 		c.source["health"] = roundi(c.health)
+		c.source["post"] = c.room_id  # they start the next battle here
 		kept.append(c.source)
 	run.crew = kept
 	run.gold += gold
