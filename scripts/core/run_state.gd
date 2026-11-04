@@ -18,7 +18,7 @@ var sails: int = 0
 var max_sails: int = 0
 var hands: int = 0  # general crew: a resource, not individuals
 var max_hands: int = 0
-var crew: Array[Dictionary] = []  # specialists, each { name, role, level }
+var crew: Array[Dictionary] = []  # specialists, each { name, role, level, health }
 var ammo: Dictionary = {}  # ammo id -> rounds
 var battles_won: int = 0
 
@@ -42,6 +42,7 @@ static func new_run(ship: Dictionary) -> RunState:
 			"name": str(names[rng.randi_range(0, names.size() - 1)]),
 			"role": str(role),
 			"level": 1,
+			"health": 100,
 		})
 	var start_ammo: Dictionary = ship.get("starting_ammo", {})
 	for ammo_id: Variant in start_ammo:
@@ -83,7 +84,12 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.hands = int(data.get("hands", run.max_hands))
 	for member: Variant in data.get("crew", []):
 		var m: Dictionary = member
-		run.crew.append({"name": str(m.get("name", "")), "role": str(m.get("role", "")), "level": int(m.get("level", 1))})
+		run.crew.append({
+			"name": str(m.get("name", "")),
+			"role": str(m.get("role", "")),
+			"level": int(m.get("level", 1)),
+			"health": int(m.get("health", 100)),
+		})
 	var saved_ammo: Dictionary = data.get("ammo", {})
 	for ammo_id: Variant in saved_ammo:
 		run.ammo[str(ammo_id)] = int(saved_ammo[ammo_id])

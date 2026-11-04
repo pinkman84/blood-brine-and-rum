@@ -22,6 +22,9 @@ const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
 const BOSUN_MEND := 5  # sails each bosun mends after a win
 const HANDS_MEND := 5  # sails the hands mend after a win anyway
 const STRUCK_GOLD := 1.5  # capturing a ship pays more than sinking it
+const HEAL_AFTER_BATTLE := 20  # health every surviving specialist recovers after a win
+const SURGEON_AFTER_BATTLE := 20  # extra if a surgeon survived
+const LOG_TIME := 4.0
 
 var player: BattleShip
 var enemy: BattleShip
@@ -54,6 +57,9 @@ var _pause_label: Label
 var _result_box: CenterContainer
 var _result_label: Label
 var _result_button: Button
+var _log_label: Label
+var _log_timer: SceneTreeTimer
+var _fallen: Array[String] = []
 
 
 func _ready() -> void:
@@ -89,6 +95,9 @@ func _process(delta: float) -> void:
 		c.step(delta)
 	DamageControl.tick(player, _player_view, player_crew, delta)
 	DamageControl.tick(enemy, _enemy_view, enemy_crew, delta)
+	DamageControl.tick_crew(player, _player_view, player_crew, delta)
+	DamageControl.tick_crew(enemy, _enemy_view, enemy_crew, delta)
+	_report_deaths()
 	_check_end()
 	if _over:
 		_refresh_ui()
@@ -148,6 +157,7 @@ func _place_crew(view: ShipView, members: Array) -> Array:
 		c.crew_name = str(m.get("name", ""))
 		c.role = str(m.get("role", ""))
 		c.level = int(m.get("level", 1))
+		c.health = float(m.get("health", BattleCrew.MAX_HEALTH))
 		c.source = m
 		c.color = Color.from_string(str(Data.get_item("crew", c.role).get("color", "")), Color.WHITE)
 		var room := _station_room(view, c.station(), placed)
@@ -212,6 +222,8 @@ func _send(c: BattleCrew, room: Dictionary) -> void:
 
 
 func _select(c: BattleCrew) -> void:
+	if c != null and not c.alive:
+		c = null
 	_selected = c
 	_player_view.selected = c
 	if c == null:
@@ -315,6 +327,8 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 		var room := view.room_at(local_hit)
 		if not room.is_empty():
 			DamageControl.on_hit(target, room, ammo_id)
+			DamageControl.wound_room(player_crew if target == player else enemy_crew, room["id"], ammo_id)
+			_report_deaths()
 	view.add_hands_lost(target.hands_ratio())
 	_check_end()
 	_refresh_ui()
@@ -359,10 +373,19 @@ func _show_victory(captured: bool) -> void:
 	var gold := int(_enemy_data.get("gold_reward", 10))
 	if captured:
 		gold = roundi(gold * STRUCK_GOLD)
-	var carpenters := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "carpenter").size()
+	var survivors := player_crew.filter(func(c: BattleCrew) -> bool: return c.alive)
+	var carpenters := survivors.filter(func(c: BattleCrew) -> bool: return c.role == "carpenter").size()
 	var repair := carpenters * CARPENTER_REPAIR
-	var bosuns := run.crew.filter(func(c: Dictionary) -> bool: return c.get("role") == "bosun").size()
+	var bosuns := survivors.filter(func(c: BattleCrew) -> bool: return c.role == "bosun").size()
 	var mend := HANDS_MEND + bosuns * BOSUN_MEND
+	var has_surgeon := survivors.any(func(c: BattleCrew) -> bool: return c.role == "surgeon")
+	var recovery := HEAL_AFTER_BATTLE + (SURGEON_AFTER_BATTLE if has_surgeon else 0)
+	var kept: Array[Dictionary] = []
+	for c: BattleCrew in survivors:
+		c.heal(recovery)
+		c.source["health"] = roundi(c.health)
+		kept.append(c.source)
+	run.crew = kept
 	run.gold += gold
 	run.battles_won += 1
 	run.hull = mini(run.max_hull, player.hull + repair)
@@ -370,8 +393,41 @@ func _show_victory(captured: bool) -> void:
 	run.hands = player.hands
 	run.ammo = player.ammo
 	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
-	_show_result((headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [gold, repair, mend, player.hands],
-		"Return to the map", GameState.finish_node)
+	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [gold, repair, mend, player.hands]
+	if not _fallen.is_empty():
+		text += "\nLost: " + ", ".join(_fallen) + "."
+	_show_result(text, "Return to the map", GameState.finish_node)
+
+
+## Announces specialists who died since the last check, on both ships.
+func _report_deaths() -> void:
+	for c: BattleCrew in player_crew + enemy_crew:
+		if c.alive or c.death_reported:
+			continue
+		c.death_reported = true
+		var ours := player_crew.has(c)
+		if ours:
+			_fallen.append("%s (%s)" % [c.crew_name, c.role_name()])
+			if c == _selected:
+				_select(null)
+			if _crew_buttons.has(c):
+				(_crew_buttons[c] as Button).disabled = true
+			_log("%s the %s has fallen!" % [c.crew_name, c.role_name().to_lower()])
+		else:
+			_log("Their %s is down." % c.role_name().to_lower())
+
+
+func _log(text: String) -> void:
+	_log_label.text = text
+	_log_label.visible = true
+	_log_timer = get_tree().create_timer(LOG_TIME)
+	_log_timer.timeout.connect(_hide_log.bind(_log_timer))
+
+
+# Only the newest message's timer hides the label.
+func _hide_log(timer: SceneTreeTimer) -> void:
+	if timer == _log_timer:
+		_log_label.visible = false
 
 
 func _show_defeat(text: String) -> void:
@@ -520,6 +576,18 @@ func _build_ui() -> void:
 	bottom.add_child(_auto_fire)
 	_add_label(bottom, "SPACE pause  F fire  Click a specialist, then a room")
 
+	_log_label = Label.new()
+	_log_label.add_theme_font_size_override("font_size", 12)
+	_log_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_log_label.offset_top = -52
+	_log_label.offset_bottom = -36
+	_log_label.offset_left = -200
+	_log_label.offset_right = 200
+	_log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_log_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_log_label.visible = false
+	root.add_child(_log_label)
+
 	_pause_label = Label.new()
 	_pause_label.text = "PAUSED"
 	_pause_label.add_theme_font_size_override("font_size", 24)
@@ -615,13 +683,18 @@ func _refresh_ui() -> void:
 	for c: BattleCrew in _crew_buttons:
 		var room := _player_view.room_by_id(c.room_id)
 		var where := str(room.get("id", "")).replace("starboard", "stbd").replace("_", " ")
+		if not c.alive:
+			(_crew_buttons[c] as Button).text = "%s  DEAD" % c.crew_name
+			continue
+		if c.is_wounded():
+			where = "wounded, " + where
 		if c.is_moving():
 			where = "moving"
 		elif player.rooms.has(c.room_id):
 			var busy := DamageControl.job(player.rooms[c.room_id])
 			if busy != "":
 				where = busy
-		(_crew_buttons[c] as Button).text = "%s  %s" % [c.crew_name, where]
+		(_crew_buttons[c] as Button).text = "%s %d%%  %s" % [c.crew_name, roundi(c.health), where]
 
 	var ammo_name := str(Data.get_item("ammo", player.selected_ammo).get("name", player.selected_ammo))
 	_fire_button.disabled = _over or player.auto_fire or player.shots_available() == 0

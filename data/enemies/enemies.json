@@ -63,7 +63,8 @@
       "helmsman",
       "gunner",
       "carpenter",
-      "bosun"
+      "bosun",
+      "surgeon"
     ],
     "max_hands": 110
   }

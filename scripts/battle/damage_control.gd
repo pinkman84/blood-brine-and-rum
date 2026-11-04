@@ -24,6 +24,12 @@ const FLOOD_RATE := 0.04  # per second while leaking (0 to 1)
 const DRAIN_RATE := 0.05  # per second once plugged
 const FLOOD_INTERVAL := 8.0  # seconds per hull point lost from a fully flooded room
 
+const FIRE_WOUND := 6.0  # health per second for a specialist in a full blaze
+const FLOOD_WOUND := 3.0  # health per second in a fully flooded room
+const HEAL_RATE := 2.0  # health per second in the sickbay, before buffs
+const HIT_WOUND := 10.0  # base wound when a shot lands in a specialist's room
+const HIT_WOUND_PER_CREW_DAMAGE := 6.0  # plus this per point of the ammo's crew_damage
+
 const DC_CAPACITY := 3.0  # work per second at full hands, shared between rooms in trouble
 const PLUG_WORK := 6.0  # work to plug a leak
 const REPAIR_WORK := 6.0  # work per point of room damage
@@ -121,6 +127,33 @@ static func tick(ship: BattleShip, view: ShipView, crew: Array, delta: float) ->
 			if float(s["repair"]) >= REPAIR_WORK:
 				s["repair"] = 0.0
 				s["damage"] = int(s["damage"]) - 1
+
+
+## Specialists standing in fire or water get hurt; those in the sickbay heal,
+## faster with a surgeon there and slower if the sickbay is damaged.
+static func tick_crew(ship: BattleShip, view: ShipView, crew: Array, delta: float) -> void:
+	var heal_boost := {}  # room id -> healing multiplier
+	for c: BattleCrew in crew:
+		if c.alive and not c.is_moving():
+			heal_boost[c.room_id] = float(heal_boost.get(c.room_id, 1.0)) * c.buff("heal")
+	for c: BattleCrew in crew:
+		if not c.alive or c.is_moving() or not ship.rooms.has(c.room_id):
+			continue
+		var s: Dictionary = ship.rooms[c.room_id]
+		var hurt := FIRE_WOUND * float(s["fire"]) / 100.0
+		if float(s["flood"]) >= 0.5:
+			hurt += FLOOD_WOUND * float(s["flood"])
+		c.hurt(hurt * delta)
+		if view.room_by_id(c.room_id).get("type", "") == "sickbay":
+			c.heal(HEAL_RATE * float(heal_boost.get(c.room_id, 1.0)) * efficiency(s) * delta)
+
+
+## A shot of this ammo landed in a room: wound every specialist standing there.
+static func wound_room(crew: Array, room_id: String, ammo_id: String) -> void:
+	var amount := HIT_WOUND + HIT_WOUND_PER_CREW_DAMAGE * float(Data.get_item("ammo", ammo_id).get("crew_damage", 0))
+	for c: BattleCrew in crew:
+		if c.alive and c.room_id == room_id and not c.is_moving():
+			c.hurt(amount * randf_range(0.7, 1.3))
 
 
 ## What a crew member standing in this room is busy with, or "".

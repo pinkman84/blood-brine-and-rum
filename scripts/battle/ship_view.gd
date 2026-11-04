@@ -113,11 +113,20 @@ func _draw() -> void:
 
 	for c: BattleCrew in crew:
 		if not c.alive:
+			var grey := Color(0.25, 0.25, 0.25)
+			draw_line(c.pos + Vector2(-3, -3), c.pos + Vector2(3, 3), grey, 1.5)
+			draw_line(c.pos + Vector2(-3, 3), c.pos + Vector2(3, -3), grey, 1.5)
 			continue
 		draw_circle(c.pos, 4.0, Color("111111"))
 		draw_circle(c.pos, 3.0, c.color)
 		if c == selected:
 			draw_arc(c.pos, 6.5, 0, TAU, 16, Color.WHITE, 1.0)
+		if c.health < BattleCrew.MAX_HEALTH:
+			var ratio := c.health / BattleCrew.MAX_HEALTH
+			var bar := Rect2(c.pos + Vector2(-5, -9), Vector2(10, 2))
+			draw_rect(bar, Color(0, 0, 0, 0.7))
+			var fill := Color("2ecc71") if ratio > 0.5 else (Color("f1c40f") if ratio > 0.25 else Color("e74c3c"))
+			draw_rect(Rect2(bar.position, Vector2(roundf(10 * ratio), 2)), fill)
 
 
 func _draw_room_state(rect: Rect2, state: Dictionary) -> void:

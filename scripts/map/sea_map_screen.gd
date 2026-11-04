@@ -22,4 +22,8 @@ func refresh() -> void:
 			ammo_lines.append(ammo_name)
 		else:
 			ammo_lines.append("%s %d" % [ammo_name, GameState.run.ammo[ammo_id]])
-	_info.text = run_summary() + "\nAmmo: " + ", ".join(ammo_lines)
+	var crew_lines: Array[String] = []
+	for m: Dictionary in GameState.run.crew:
+		var role := str(Data.get_item("crew", str(m.get("role", ""))).get("name", ""))
+		crew_lines.append("%s (%s) %d%%" % [m.get("name", ""), role, int(m.get("health", 100))])
+	_info.text = run_summary() + "\nAmmo: " + ", ".join(ammo_lines) + "\nCrew: " + ", ".join(crew_lines)
