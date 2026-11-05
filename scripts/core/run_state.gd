@@ -21,6 +21,8 @@ var max_hands: int = 0
 var crew: Array[Dictionary] = []  # specialists, each { name, role, level, health, post? }
 var ammo: Dictionary = {}  # ammo id -> rounds
 var prisoners: int = 0  # held below for ransom at a trading post
+var morale: int = Morale.START
+var rum: int = Morale.START_RUM  # rations; the crew drinks one per node
 var battles_won: int = 0
 
 
@@ -67,6 +69,8 @@ func to_dict() -> Dictionary:
 		"crew": crew,
 		"ammo": ammo,
 		"prisoners": prisoners,
+		"morale": morale,
+		"rum": rum,
 		"battles_won": battles_won,
 	}
 
@@ -98,6 +102,8 @@ static func from_dict(data: Dictionary) -> RunState:
 		run.ammo[str(ammo_id)] = int(saved_ammo[ammo_id])
 	run.battles_won = int(data.get("battles_won", 0))
 	run.prisoners = int(data.get("prisoners", 0))
+	run.morale = int(data.get("morale", Morale.START))
+	run.rum = int(data.get("rum", Morale.START_RUM))
 	return run
 
 

@@ -38,6 +38,9 @@ var fleeing := false  # making sail to escape
 var escape := 0.0  # 0 to 1; at 1 she's away
 var flees_at := 0.0  # hull share at which an enemy captain runs (0 = never)
 var boards := false  # an enemy captain who likes to grapple and board
+var ai: Dictionary = {}  # the enemy faction's fighting style (data/factions "ai")
+var captives := 0  # people chained below decks (slavers)
+var morale_factor := 1.0  # from Morale.factor(); enemies fight at 1.0 for now
 var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
 var auto_fire := false
@@ -58,6 +61,7 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.guns = int(ship.get("guns_per_side", 4))
 	s.hands = run.hands
 	s.max_hands = run.max_hands
+	s.morale_factor = Morale.factor(run.morale)
 	s.ammo = run.ammo.duplicate()
 	return s
 
@@ -79,6 +83,10 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.unlimited_ammo = true
 	s.flees_at = float(data.get("flees_at", 0.0))
 	s.boards = bool(data.get("boards", false))
+	s.captives = int(data.get("captives", 0))
+	var faction := str(data.get("faction", ""))
+	if Data.has_item("factions", faction):
+		s.ai = Data.get_item("factions", faction).get("ai", {})
 	return s
 
 
@@ -159,6 +167,12 @@ func facing_angle() -> float:
 
 func hands_ratio() -> float:
 	return float(hands) / maxf(1.0, max_hands)
+
+
+## How hard the hands can work: how many are left, times their morale.
+## Scales reloads, damage control, turning and grappling.
+func effort() -> float:
+	return hands_ratio() * morale_factor
 
 
 func hull_ratio() -> float:

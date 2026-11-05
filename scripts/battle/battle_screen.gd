@@ -29,6 +29,7 @@ extends Node
 ## to move them, right-click to deselect.
 
 const PLAYER_POS := Vector2(200, 200)
+const STATUS_WIDTH := 290  # each ship's status column at the top; text wraps inside it
 const ENEMY_POS := Vector2(470, 200)
 const BASE_TURN_TIME := 8.0  # seconds to come about with full hands and no helmsman
 const BASE_STALL_CHANCE := 0.3  # chance a turn hangs halfway without a helmsman
@@ -37,13 +38,14 @@ const MIN_FLEE_SAILS := 0.3  # below this share of sails a ship can't run
 const ESCAPE_DECAY := 0.02  # escape lost per second while she can't run
 const FLEE_DRIFT := 40.0  # pixels a fleeing ship pulls away by the time she escapes
 const HEATED_MISHAP := 0.12  # chance per heated-shot volley of a fire on your own gun deck
-const AI_TURN_AFTER_VOLLEY := 0.3
+const AI_CREW_THINK := 1.5  # seconds between enemy crew decisions
+const AI_WOUNDED := 35.0  # enemy specialists below this health head for the sickbay
 const PULL_DISTANCE := 45.0  # pixels each ship moves inwards when fully lashed
 const PARTY_SIZES := [0.33, 0.5, 1.0]  # shares of your hands you can send across
 const PARTY_LABELS := ["a third", "half", "all hands"]
-const AI_BOARD_EDGE := 1.3  # an enemy who boards grapples when this much stronger in hands
 const AI_BOARD_DELAY := 1.5  # seconds an enemy captain waits once lashed before boarding
 const PRISONER_RANSOM := 2  # gold per prisoner at a trading post
+const SURVIVOR_SHARE := 0.4  # roughly this share of a sunk ship's hands can be pulled from the water
 const DEBUG_BOARDING := true  # shows a "Lash now" test button (B key); set false to hide  # chance the enemy comes about after firing, if the other side is ready
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
@@ -83,6 +85,8 @@ var _turn_button: Button
 var _flee_button: Button
 var _boarding := Boarding.new()
 var _ai_board_wait := 0.0
+var _ai_crew_t := 0.0
+var _enemy_homes := {}  # BattleCrew -> room id they started the battle in
 var _boarding_row: HBoxContainer
 var _grapple_button: Button
 var _board_buttons: Array[Button] = []
@@ -105,6 +109,7 @@ var _result_button: Button
 var _log_label: Label
 var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
+var _start_hands := 0
 
 
 func _ready() -> void:
@@ -113,6 +118,7 @@ func _ready() -> void:
 	var ship_data := Data.get_item("ships", run.ship_id)
 	_enemy_data = _pick_enemy(run.sea_number)
 	player = BattleShip.from_run(run, ship_data)
+	_start_hands = player.hands
 	enemy = BattleShip.from_enemy(_enemy_data)
 	for side: String in BattleShip.SIDES:  # so the first volleys don't land together
 		enemy.reloads[side] = randf() * 3.0
@@ -123,6 +129,8 @@ func _ready() -> void:
 	_enemy_view.room_states = enemy.rooms
 	player_crew = _place_crew(_player_view, run.crew)
 	enemy_crew = _place_crew(_enemy_view, _enemy_crew_entries())
+	for c: BattleCrew in enemy_crew:
+		_enemy_homes[c] = c.room_id
 	_player_view.crew = player_crew
 	_enemy_view.crew = enemy_crew
 	_build_ui()
@@ -165,12 +173,15 @@ func _process(delta: float) -> void:
 		return
 	_enemy_think()
 	_enemy_board_think(delta)
+	_enemy_crew_think(delta)
 	var guns_free := not _boarding.guns_silent()
 	if guns_free and player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
 	if guns_free and enemy.can_fire():
+		enemy.selected_ammo = _enemy_pick_ammo()
 		_fire(enemy, player, _enemy_view, _player_view)
-		if not enemy.turning and enemy.is_loaded(enemy.other_side()) and randf() < AI_TURN_AFTER_VOLLEY:
+		var turn_chance := float(enemy.ai.get("turn_after_volley", 0.3))
+		if not enemy.turning and enemy.is_loaded(enemy.other_side()) and randf() < turn_chance:
 			_come_about(enemy, _enemy_view, enemy_crew)
 	_refresh_ui()
 
@@ -288,14 +299,21 @@ func _on_ship_clicked(local_point: Vector2) -> void:
 
 
 func _send(c: BattleCrew, room: Dictionary) -> void:
-	if c.room_id == room["id"]:
-		return
-	var cell: Variant = _free_cell(_player_view, room, player_crew, c)
+	if _send_on(_player_view, player_crew, c, room):
+		_refresh_ui()
+
+
+## Moves a specialist on either ship to a free spot in a room. False if the
+## room is full or they're already there.
+func _send_on(view: ShipView, crew: Array, c: BattleCrew, room: Dictionary) -> bool:
+	if room.is_empty() or c.room_id == room["id"]:
+		return false
+	var cell: Variant = _free_cell(view, room, crew, c)
 	if cell == null:
-		return  # room is full
+		return false
 	c.room_id = room["id"]
 	c.target = cell
-	_refresh_ui()
+	return true
 
 
 func _select(c: BattleCrew) -> void:
@@ -337,7 +355,7 @@ func _update_stations() -> void:
 
 
 func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
-	var hands := ship.hands_ratio()
+	var hands := ship.effort()
 
 	# Guns: hands load both broadsides; each gun deck's condition and any master
 	# gunner standing in it matter. A damaged magazine slows the powder supply,
@@ -393,7 +411,7 @@ func _come_about(ship: BattleShip, view: ShipView, crew: Array) -> void:
 	var turn_buff := 1.0
 	for c: BattleCrew in _specialists_at(view, crew, "helm"):
 		turn_buff *= c.buff("turn")
-	var speed := turn_buff * lerpf(0.5, 1.0, ship.hands_ratio()) * maxf(0.25, _room_efficiency(ship, helm_room))
+	var speed := turn_buff * lerpf(0.5, 1.0, ship.effort()) * maxf(0.25, _room_efficiency(ship, helm_room))
 	var stall_chance := BASE_STALL_CHANCE / (1.0 + (turn_buff - 1.0) * 4.0)
 	ship.start_turn(BASE_TURN_TIME / speed, stall_chance)
 	if ship == player:
@@ -477,7 +495,7 @@ func _crew_buff(crew: Array, stat: String) -> float:
 
 
 func _grapple_skill(ship: BattleShip, crew: Array) -> float:
-	return _crew_buff(crew, "grapple") * lerpf(0.5, 1.0, ship.hands_ratio())
+	return _crew_buff(crew, "grapple") * lerpf(0.5, 1.0, ship.effort())
 
 
 func _throw(ship: BattleShip) -> void:
@@ -555,7 +573,8 @@ func _tick_melee(delta: float) -> void:
 	var att := _boarding.attacker
 	var att_crew := player_crew if att == player else enemy_crew
 	var def_crew := enemy_crew if att == player else player_crew
-	var event := _boarding.tick_melee(delta, _crew_buff(att_crew, "boarding"), _crew_buff(def_crew, "boarding"))
+	var event := _boarding.tick_melee(delta, _crew_buff(att_crew, "boarding") * att.morale_factor,
+		_crew_buff(def_crew, "boarding") * _boarding.defender.morale_factor)
 	if event == "":
 		return
 	# Boarding masters lead from the front on both sides, and get hurt doing it.
@@ -589,7 +608,7 @@ func _tick_melee(delta: float) -> void:
 ## Enemy captains who like to board grapple when they have the bigger crew,
 ## board as soon as they're lashed (if still stronger), and otherwise cut loose.
 func _enemy_board_think(delta: float) -> void:
-	var stronger := enemy.hands >= player.hands * AI_BOARD_EDGE
+	var stronger := enemy.hands >= player.hands * float(enemy.ai.get("board_edge", 1.3))
 	match _boarding.state:
 		"none", "grappling":
 			if _boarding.grappler == player:
@@ -624,17 +643,26 @@ func _show_boarding_victory(prisoners: int) -> void:
 	run.battles_won += 1
 	var text := "The %s is ours! Taken by boarding.\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
 		enemy.display_name, gold, patched["repair"], patched["mend"], player.hands]
+	var morale := Morale.WIN + Morale.CAPTURE + (Morale.FREED_CAPTIVES if enemy.captives > 0 else 0)
+	text = _free_captives(text)
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
+	text += _morale_line(morale)
 	if prisoners <= 0:
 		_show_result(text, "Return to the map", GameState.finish_node)
 		return
 	text += "\n%d of her crew have surrendered. What's to be done with them?" % prisoners
+	_offer_prisoners(text, prisoners, "Set them adrift")
+
+
+## The choice of what to do with captured or rescued enemy sailors.
+func _offer_prisoners(text: String, count: int, leave_text: String) -> void:
+	var run: RunState = GameState.run
 	var room := run.max_hands - run.hands
 	_show_choices(text, [
-		["Press %d into service" % mini(prisoners, room), _settle_prisoners.bind("press", prisoners)],
-		["Hold them for ransom (%d gold at port)" % (prisoners * PRISONER_RANSOM), _settle_prisoners.bind("ransom", prisoners)],
-		["Set them adrift", _settle_prisoners.bind("adrift", prisoners)],
+		["Press %d into service (morale %d)" % [mini(count, room), Morale.PRESSED_PRISONERS], _settle_prisoners.bind("press", count)],
+		["Lock them up for ransom (%d gold at port)" % (count * PRISONER_RANSOM), _settle_prisoners.bind("ransom", count)],
+		[leave_text, _settle_prisoners.bind("adrift", count)],
 	])
 
 
@@ -643,9 +671,74 @@ func _settle_prisoners(mode: String, count: int) -> void:
 	match mode:
 		"press":
 			run.hands = mini(run.max_hands, run.hands + count)
+			Morale.change(run, Morale.PRESSED_PRISONERS)  # the crew don't trust them
 		"ransom":
 			run.prisoners += count
 	GameState.finish_node()
+
+
+# --- Enemy captain and crew ------------------------------------------------
+
+## Picks the enemy's next shot from its faction's style: chain at a ship
+## that's running, grape to soften us up before boarding, now and then a
+## heated ball, otherwise round shot.
+func _enemy_pick_ammo() -> String:
+	var ai := enemy.ai
+	if bool(ai.get("chain_on_runner", false)) and player.fleeing and player.sails_ratio() >= MIN_FLEE_SAILS:
+		return "chain_shot"
+	if bool(ai.get("grape_before_boarding", false)) and enemy.boards and player.hands > 10 \
+			and enemy.hands >= player.hands * float(ai.get("board_edge", 1.3)) * 0.8:
+		return "grape_shot"
+	if randf() < float(ai.get("heated_chance", 0.0)):
+		return "heated_shot"
+	return "round_shot"
+
+
+## Enemy specialists look after their ship: the badly wounded go below to the
+## sickbay, anyone with a work buff (the carpenter) goes where the trouble is,
+## and everyone else returns to their post.
+func _enemy_crew_think(delta: float) -> void:
+	_ai_crew_t -= delta
+	if _ai_crew_t > 0.0:
+		return
+	_ai_crew_t = AI_CREW_THINK
+	var sickbay: Dictionary = {}
+	for room in _enemy_view.rooms:
+		if room["type"] == "sickbay":
+			sickbay = room
+	var trouble := _worst_room(enemy, _enemy_view)
+	for c: BattleCrew in enemy_crew:
+		if not c.alive or c.is_moving():
+			continue
+		if c.health < AI_WOUNDED and not sickbay.is_empty():
+			_send_on(_enemy_view, enemy_crew, c, sickbay)
+		elif c.buff("work") > 1.0 and not trouble.is_empty():
+			_send_on(_enemy_view, enemy_crew, c, trouble)
+		elif c.health >= BattleCrew.WOUNDED:
+			_send_on(_enemy_view, enemy_crew, c, _enemy_view.room_by_id(str(_enemy_homes.get(c, ""))))
+
+
+## The room most in need of hands: fires first, then leaks, then damage.
+func _worst_room(ship: BattleShip, view: ShipView) -> Dictionary:
+	var best: Dictionary = {}
+	var best_score := 0.0
+	for room in view.rooms:
+		var s: Dictionary = ship.rooms[room["id"]]
+		var score := float(s["fire"]) * 3.0 + (150.0 if s["leak"] else 0.0) + int(s["damage"]) * 20.0
+		if score > best_score:
+			best_score = score
+			best = room
+	return best
+
+
+## Freed captives (slavers): they join if there's room aboard.
+func _free_captives(text: String) -> String:
+	if enemy.captives <= 0:
+		return text
+	var run: RunState = GameState.run
+	var joined := mini(enemy.captives, run.max_hands - run.hands)
+	run.hands += joined
+	return text + "\n%d captives freed from her hold; %d join your crew." % [enemy.captives, joined]
 
 
 func _on_turn_pressed() -> void:
@@ -753,9 +846,24 @@ func _show_victory(captured: bool) -> void:
 	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
 	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
 		gold, patched["repair"], patched["mend"], player.hands]
+	var morale := Morale.WIN + (Morale.CAPTURE if captured else 0)
+	if captured:
+		text = _free_captives(text)
+		if enemy.captives > 0:
+			morale += Morale.FREED_CAPTIVES
+	elif enemy.captives > 0:
+		text += "\nThe captives chained below went down with her."
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
-	_show_result(text, "Return to the map", GameState.finish_node)
+	text += _morale_line(morale)
+	var survivors := 0
+	if not captured:
+		survivors = roundi(enemy.hands * SURVIVOR_SHARE * randf_range(0.7, 1.3))
+	if survivors <= 0:
+		_show_result(text, "Return to the map", GameState.finish_node)
+		return
+	text += "\n%d of her crew are clinging to the wreckage. What's to be done with them?" % survivors
+	_offer_prisoners(text, survivors, "Leave them to the sea")
 
 
 ## Someone got away. Nobody is paid and nothing is mended; the damage stays.
@@ -765,7 +873,22 @@ func _show_escape(we_ran: bool) -> void:
 	text += "\nHull %d/%d. Hands left: %d." % [player.hull, player.max_hull, player.hands]
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
+	text += _morale_line(Morale.RAN_AWAY if we_ran else Morale.ENEMY_ESCAPED)
 	_show_result(text, "Return to the map", GameState.finish_node)
+
+
+## Applies this battle's morale: the given result, minus the dead and any
+## heavy losses among the hands. Returns a line for the result screen.
+func _morale_line(result: int) -> String:
+	var run: RunState = GameState.run
+	var amount := result + _fallen.size() * Morale.SPECIALIST_DIED
+	if _start_hands > 0 and float(_start_hands - player.hands) / _start_hands > Morale.HEAVY_LOSS_SHARE:
+		amount += Morale.HEAVY_LOSSES
+	var before := run.morale
+	var changed := Morale.change(run, amount)
+	if changed == 0:
+		return "\nMorale holds at %d (%s)." % [run.morale, Morale.mood(run.morale)]
+	return "\nMorale %+d: %d to %d (%s)." % [changed, before, run.morale, Morale.mood(run.morale)]
 
 
 ## Saves the battle's results to the run: surviving specialists (with their
@@ -914,8 +1037,12 @@ func _build_ui() -> void:
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(top)
 	var left := _vbox(top)
-	_add_label(left, player.display_name)
+	left.custom_minimum_size = Vector2(STATUS_WIDTH, 0)
+	left.add_theme_constant_override("separation", 1)
+	var morale := GameState.run.morale
+	_add_label(left, "%s   MORALE %d (%s)" % [player.display_name, morale, Morale.mood(morale)])
 	_player_status = _add_label(left, "")
+	_player_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_player_hull_bar = _add_bar(left, Color("c0392b"))
 	_player_sails_bar = _add_bar(left, Color("ecf0f1"))
 	_player_reload_bar = _add_bar(left, Color("f1c40f"))
@@ -926,15 +1053,20 @@ func _build_ui() -> void:
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(gap)
 	var right := _vbox(top)
+	right.custom_minimum_size = Vector2(STATUS_WIDTH, 0)
+	right.add_theme_constant_override("separation", 1)
 	var enemy_name := _add_label(right, enemy.display_name)
 	enemy_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_enemy_status = _add_label(right, "")
 	_enemy_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_enemy_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_enemy_hull_bar = _add_bar(right, Color("c0392b"))
 	_enemy_sails_bar = _add_bar(right, Color("ecf0f1"))
 	_enemy_reload_bar = _add_bar(right, Color("f1c40f"))
 	_enemy_reload_other = _add_bar(right, Color("8a7a2a"))
 	_enemy_escape_bar = _add_bar(right, Color("5dade2"))
+	for bar in [_enemy_hull_bar, _enemy_sails_bar, _enemy_reload_bar, _enemy_reload_other, _enemy_escape_bar]:
+		(bar as ProgressBar).size_flags_horizontal = Control.SIZE_SHRINK_END  # hug the right edge
 
 	# Left: the crew roster. Click a name to select, then click a room.
 	var middle := HBoxContainer.new()
@@ -949,7 +1081,9 @@ func _build_ui() -> void:
 		button.button_group = _crew_group
 		button.focus_mode = Control.FOCUS_NONE
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size = Vector2(108, 0)
+		button.custom_minimum_size = Vector2(130, 0)
+		button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		button.clip_text = true
 		button.add_theme_color_override("font_color", c.color)
 		button.pressed.connect(_select.bind(c))
 		roster.add_child(button)
@@ -978,12 +1112,12 @@ func _build_ui() -> void:
 	column.add_child(bottom)
 	_fire_button = Button.new()
 	_fire_button.focus_mode = Control.FOCUS_NONE
-	_fire_button.custom_minimum_size = Vector2(150, 0)
+	_fire_button.custom_minimum_size = Vector2(130, 0)
 	_fire_button.pressed.connect(_on_fire_pressed)
 	bottom.add_child(_fire_button)
 	_turn_button = Button.new()
 	_turn_button.focus_mode = Control.FOCUS_NONE
-	_turn_button.custom_minimum_size = Vector2(110, 0)
+	_turn_button.custom_minimum_size = Vector2(100, 0)
 	_turn_button.pressed.connect(_on_turn_pressed)
 	bottom.add_child(_turn_button)
 	_flee_button = Button.new()
@@ -1001,7 +1135,6 @@ func _build_ui() -> void:
 	_auto_fire.focus_mode = Control.FOCUS_NONE
 	_auto_fire.toggled.connect(_on_auto_fire_toggled)
 	bottom.add_child(_auto_fire)
-	_add_label(bottom, "SPACE pause  F fire  C turn  R run  G grapple")
 
 	_log_label = Label.new()
 	_log_label.add_theme_font_size_override("font_size", 12)
@@ -1016,8 +1149,8 @@ func _build_ui() -> void:
 	root.add_child(_log_label)
 
 	_pause_label = Label.new()
-	_pause_label.text = "PAUSED"
-	_pause_label.add_theme_font_size_override("font_size", 24)
+	_pause_label.text = "PAUSED\nSPACE resume   F fire   C come about   R make sail   G grapple"
+	_pause_label.add_theme_font_size_override("font_size", 16)
 	_pause_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pause_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1069,7 +1202,7 @@ func _add_label(parent: Node, text: String) -> Label:
 func _add_bar(parent: Node, fill: Color) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(150, 5)
+	bar.custom_minimum_size = Vector2(150, 4)
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color(0, 0, 0, 0.55)
 	var fg := StyleBoxFlat.new()
@@ -1208,7 +1341,7 @@ func _refresh_boarding_ui() -> void:
 		var button := _board_buttons[i]
 		button.visible = our_turn_to_board
 		button.disabled = _over or player.hands < 2
-		button.text = "Board with %s (%d)" % [PARTY_LABELS[i], maxi(1, roundi(player.hands * float(PARTY_SIZES[i])))]
+		button.text = "Board: %s (%d)" % [PARTY_LABELS[i], maxi(1, roundi(player.hands * float(PARTY_SIZES[i])))]
 	_cut_loose_button.visible = b.state == "lashed"
 	_cut_loose_button.disabled = _over or b.cooldown(player) > 0.0
 	_cut_loose_button.text = "Cut loose (G) %s" % hooks

@@ -75,5 +75,31 @@
     "max_hands": 110,
     "flees_at": 0.0,
     "boards": true
+  },
+  {
+    "id": "slaver_brig",
+    "name": "Slaver brig",
+    "faction": "slavers",
+    "max_hull": 26,
+    "guns_per_side": 3,
+    "reload_time": 12,
+    "accuracy": 0.45,
+    "gold_reward": 15,
+    "min_sea": 1,
+    "hull_color": "3b2f2a",
+    "sail_color": "bfb59e",
+    "flag_color": "5b1a1a",
+    "max_sails": 16,
+    "evasion": 0.08,
+    "layout": "brigantine",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "carpenter"
+    ],
+    "max_hands": 70,
+    "flees_at": 0.4,
+    "boards": false,
+    "captives": 20
   }
 ]

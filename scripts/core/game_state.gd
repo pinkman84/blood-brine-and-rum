@@ -51,6 +51,11 @@ func continue_run() -> void:
 
 ## Call when the player finishes a node. Moves on, saves, and returns to the map.
 func finish_node() -> void:
+	# A day's sailing: the crew drinks its rum ration, or grumbles without one.
+	if run.rum > 0:
+		run.rum -= 1
+	else:
+		Morale.change(run, Morale.NO_RUM)
 	run.node_index += 1
 	if run.node_index >= RunState.NODES_PER_SEA:
 		run.node_index = 0
