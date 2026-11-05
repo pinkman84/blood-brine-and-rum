@@ -92,7 +92,10 @@ func add_button(text: String, action: Callable, enabled := true) -> Button:
 
 
 func run_summary() -> String:
-	var run: RunState = GameState.run
+	return summary(GameState.run)
+
+
+static func summary(run: RunState) -> String:
 	if run == null:
 		return ""
 	return "Sea %d of %d   Node %d of %d\nGold %d   Hull %d/%d   Sails %d/%d\nHands %d/%d   Specialists %d\nMorale %d (%s)   Rum %d%s" % [

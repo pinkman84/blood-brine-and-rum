@@ -45,6 +45,8 @@ const PARTY_SIZES := [0.33, 0.5, 1.0]  # shares of your hands you can send acros
 const PARTY_LABELS := ["a third", "half", "all hands"]
 const AI_BOARD_DELAY := 1.5  # seconds an enemy captain waits once lashed before boarding
 const PRISONER_RANSOM := 2  # gold per prisoner at a trading post
+const ELITE_BOOST := 1.3  # a sea's exit captain: this much more hull and hands
+const ELITE_GOLD := 2.0
 const SURVIVOR_SHARE := 0.4  # roughly this share of a sunk ship's hands can be pulled from the water
 const DEBUG_BOARDING := true  # shows a "Lash now" test button (B key); set false to hide  # chance the enemy comes about after firing, if the other side is ready
 const WATER_COLOR := Color("2f5a73")
@@ -391,10 +393,25 @@ func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
 
 func _pick_enemy(sea: int) -> Dictionary:
 	var all: Array = Data.get_all("enemies")
-	var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= sea)
+	var run: RunState = GameState.run
+	var elite := run.elite_pending
+	run.elite_pending = false
+	# The sea's exit fight may draw from one sea ahead.
+	var reach := sea + (1 if elite else 0)
+	var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= reach)
 	if options.is_empty():
 		options = all
-	return options.pick_random()
+	var picked: Dictionary = options.pick_random()
+	if not elite:
+		return picked
+	# A veteran captain guarding the way out: tougher ship, richer prize.
+	var boosted := picked.duplicate(true)
+	boosted["name"] = "Veteran " + str(picked.get("name", "ship")).to_lower()
+	boosted["max_hull"] = roundi(int(picked.get("max_hull", 20)) * ELITE_BOOST)
+	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * ELITE_BOOST)
+	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + 0.05
+	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * ELITE_GOLD)
+	return boosted
 
 
 # --- Coming about -----------------------------------------------------------
@@ -591,8 +608,11 @@ func _tick_melee(delta: float) -> void:
 			_log("Boarding: %d of ours against %d of theirs." % [_boarding.party, _boarding.defender.hands] if ours
 				else "Repel boarders! %d of ours against %d of theirs." % [_boarding.defender.hands, _boarding.party])
 		"repelled":
-			_log("We're thrown back! Survivors return. They may counter-board!" if ours
-				else "Boarders repelled! Board them back, or cut loose.")
+			if ours and _boarding.wiped_out:
+				_log("Our boarding party is cut down to the last man!")
+			else:
+				_log("We're thrown back! Survivors return. They may counter-board!" if ours
+					else "Boarders repelled! Board them back, or cut loose.")
 			_ai_board_wait = AI_BOARD_DELAY
 		"taken":
 			_over = true
@@ -814,7 +834,10 @@ func _check_end() -> void:
 		_over = true
 		_select(null)
 		_player_view.strike_colours()
-		get_tree().create_timer(1.0, false).timeout.connect(_show_defeat.bind("No hands left to fight her. You strike your colours."))
+		var why := "No hands left to fight her. You strike your colours."
+		if _boarding.wiped_out and _boarding.attacker == player:
+			why = "Your boarding party was cut down to the last man, and there's no one left aboard to sail her. You strike your colours."
+		get_tree().create_timer(1.0, false).timeout.connect(_show_defeat.bind(why))
 
 
 ## Hands a ship has away in a boarding party (they still count as hers).

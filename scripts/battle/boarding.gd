@@ -26,13 +26,14 @@ const LOSS_RATE := 0.08  # share of the enemy's strength lost per round
 const BREAK_RATIO := 0.25  # a side breaks when it has less than this of the other's strength
 const WOUND_PER_ROUND := 6.0  # to each specialist fighting in the melee
 
-var state := "none"  # none, grappling, lashed, melee
+var state := "none"  # none, grappling, lashed, melee, taken
 var hooks := 0
 var grappler: BattleShip = null  # whose hooks are in
 var initiative: BattleShip = null  # who may board next while lashed
 var attacker: BattleShip = null
 var defender: BattleShip = null
 var party := 0  # attackers still fighting
+var wiped_out := false  # the last boarding party died to the last man
 var pull := 0.0  # how far the ships have been drawn together, 0 to 1 (eased)
 
 var _cooldowns := {}  # BattleShip -> seconds
@@ -44,11 +45,11 @@ func closeness() -> float:
 
 
 func guns_silent() -> bool:
-	return state == "lashed" or state == "melee"
+	return state == "lashed" or state == "melee" or state == "taken"
 
 
 func is_lashed() -> bool:
-	return state == "lashed" or state == "melee"
+	return state == "lashed" or state == "melee" or state == "taken"
 
 
 func cooldown(ship: BattleShip) -> float:
@@ -114,6 +115,7 @@ func start_melee(from: BattleShip, to: BattleShip, size: int) -> void:
 	attacker = from
 	defender = to
 	party = size
+	wiped_out = false
 	state = "melee"
 	_round_t = 0.0
 
@@ -134,9 +136,13 @@ func tick_melee(delta: float, attack_buff: float, defend_buff: float) -> String:
 	attack = party * attack_buff
 	defend = defender.hands * DEFENDER_BONUS * defend_buff
 	if party <= 0 or attack < defend * BREAK_RATIO:
+		wiped_out = party <= 0
 		fall_back()
 		return "repelled"
 	if defender.hands <= 0 or defend < attack * BREAK_RATIO:
+		# The boarders hold her deck; the survivors are still our crew.
+		attacker.hands = mini(attacker.max_hands, attacker.hands + party)
+		state = "taken"
 		return "taken"
 	return "round"
 
