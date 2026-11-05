@@ -77,7 +77,7 @@ static func tick(ship: BattleShip, view: ShipView, crew: Array, delta: float) ->
 	for id: String in ship.rooms:
 		if job(ship.rooms[id]) != "":
 			in_trouble += 1
-	var share := DC_CAPACITY * ship.hands_ratio() / maxf(1.0, in_trouble)
+	var share := DC_CAPACITY * ship.effort() / maxf(1.0, in_trouble)
 	var boost := {}  # room id -> work multiplier from specialists standing there
 	for c: BattleCrew in crew:
 		if c.alive and not c.is_moving():

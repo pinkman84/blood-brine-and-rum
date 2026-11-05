@@ -35,12 +35,12 @@
   {
     "id": "heated_shot",
     "name": "Heated shot",
-    "description": "Starts fires. Risky to load.",
+    "description": "Glowing from the furnace: sets ships alight, but a ball can roll loose on your own gun deck.",
     "hull_damage": 2,
     "crew_damage": 0,
     "sail_damage": 0,
     "fire_chance": 0.4,
-    "unlocked_at_start": false,
+    "unlocked_at_start": true,
     "unlimited": false
   },
   {

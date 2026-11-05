@@ -5,7 +5,15 @@
     "short_name": "the Company",
     "description": "Merchant empire with its own navy. Main villain and final boss.",
     "starting_reputation": -50,
-    "always_hostile": true
+    "always_hostile": true,
+    "ai": {
+      "style": "Defensive merchant captains. Round shot, run when hurt, never board.",
+      "turn_after_volley": 0.15,
+      "board_edge": 99.0,
+      "chain_on_runner": false,
+      "grape_before_boarding": false,
+      "heated_chance": 0.0
+    }
   },
   {
     "id": "navy",
@@ -13,7 +21,15 @@
     "short_name": "the Navy",
     "description": "Law of the sea. Hostile to pirates, but can be bribed or offer a pardon.",
     "starting_reputation": -25,
-    "always_hostile": false
+    "always_hostile": false,
+    "ai": {
+      "style": "Disciplined. Keeps up a turning rhythm, chains anyone who runs, grapes before boarding.",
+      "turn_after_volley": 0.5,
+      "board_edge": 1.3,
+      "chain_on_runner": true,
+      "grape_before_boarding": true,
+      "heated_chance": 0.0
+    }
   },
   {
     "id": "brotherhood",
@@ -21,7 +37,15 @@
     "short_name": "the Brotherhood",
     "description": "Your side, as long as you keep the code. Runs the havens.",
     "starting_reputation": 25,
-    "always_hostile": false
+    "always_hostile": false,
+    "ai": {
+      "style": "Rarely hostile.",
+      "turn_after_volley": 0.3,
+      "board_edge": 1.3,
+      "chain_on_runner": true,
+      "grape_before_boarding": true,
+      "heated_chance": 0.1
+    }
   },
   {
     "id": "rivals",
@@ -29,7 +53,15 @@
     "short_name": "rivals",
     "description": "Competition. Can be duelled, robbed or recruited.",
     "starting_reputation": 0,
-    "always_hostile": false
+    "always_hostile": false,
+    "ai": {
+      "style": "Reckless. Boards at a small edge, grapes first, sometimes fires heated shot.",
+      "turn_after_volley": 0.3,
+      "board_edge": 1.1,
+      "chain_on_runner": true,
+      "grape_before_boarding": true,
+      "heated_chance": 0.15
+    }
   },
   {
     "id": "slavers",
@@ -37,6 +69,14 @@
     "short_name": "slavers",
     "description": "Always hostile. Free their captives for crew and Brotherhood favour.",
     "starting_reputation": -100,
-    "always_hostile": true
+    "always_hostile": true,
+    "ai": {
+      "style": "Cowards with cargo to protect. Run early, chain anyone trying to escape, never board.",
+      "turn_after_volley": 0.2,
+      "board_edge": 99.0,
+      "chain_on_runner": true,
+      "grape_before_boarding": false,
+      "heated_chance": 0.0
+    }
   }
 ]

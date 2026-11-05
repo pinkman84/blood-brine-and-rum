@@ -51,10 +51,21 @@ func continue_run() -> void:
 
 ## Call when the player finishes a node. Moves on, saves, and returns to the map.
 func finish_node() -> void:
-	run.node_index += 1
+	# A day's sailing: the crew drinks its rum ration, or grumbles without one.
+	if run.rum > 0:
+		run.rum -= 1
+	else:
+		Morale.change(run, Morale.NO_RUM)
+	# Steps through the sea follow the map: we're one past the node just finished.
+	var here := int(run.map.get("current", -1))
+	if here >= 0:
+		run.node_index = int(run.map["nodes"][here]["layer"]) + 1
+	else:
+		run.node_index += 1
 	if run.node_index >= RunState.NODES_PER_SEA:
 		run.node_index = 0
 		run.sea_number += 1
+		run.map = {}  # the next sea's map is drawn when we first see it
 		if run.sea_number > RunState.SEAS_PER_RUN:
 			end_run(true)
 			return

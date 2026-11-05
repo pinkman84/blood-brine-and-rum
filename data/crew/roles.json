@@ -15,9 +15,10 @@
     "name": "Helmsman",
     "station": "helm",
     "color": "f1c40f",
-    "description": "At the helm, the ship dodges more. Later: faster, safer coming about.",
+    "description": "At the helm, the ship dodges more and comes about faster, with less risk of stalling in irons.",
     "buffs": {
-      "evasion": 1.3
+      "evasion": 1.3,
+      "turn": 1.5
     }
   },
   {
@@ -48,6 +49,17 @@
     "description": "Heals wounded specialists in the sickbay.",
     "buffs": {
       "heal": 2.0
+    }
+  },
+  {
+    "id": "boarding_master",
+    "name": "Boarding master",
+    "station": "hold",
+    "color": "9b59b6",
+    "description": "Leads boarding parties across the rail and stiffens the defence when you're boarded. Better grapple throws and rope cutting.",
+    "buffs": {
+      "boarding": 1.5,
+      "grapple": 1.4
     }
   }
 ]

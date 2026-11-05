@@ -5,12 +5,20 @@ const REPAIR_AMOUNT := 5
 const REPAIR_COST := 10
 const CHAIN_SHOT_AMOUNT := 5
 const CHAIN_SHOT_COST := 8
+const HEATED_AMOUNT := 5
+const HEATED_COST := 12
 const RECRUIT_AMOUNT := 10
 const RECRUIT_COST := 15
 const HIRE_COST := 40
+const RUM_AMOUNT := 5
+const RUM_COST := 10
+const DRINK_COST := 15
 
 var _offer: Dictionary = {}  # the specialist for hire at this port
 var _hire_button: Button
+var _ransom_button: Button
+var _deserted := 0  # hands who slipped ashore when we arrived
+const RANSOM_EACH := 2  # keep in step with PRISONER_RANSOM in battle_screen.gd
 
 
 func _title() -> String:
@@ -18,19 +26,31 @@ func _title() -> String:
 
 
 func _build() -> void:
+	# Unhappy hands slip ashore the moment we're in port.
+	var arriving: RunState = GameState.run
+	_deserted = roundi(arriving.hands * Morale.desertion_share(arriving.morale))
+	arriving.hands -= _deserted
+	add_button("Buy %d rum (%d gold)" % [RUM_AMOUNT, RUM_COST], _buy_rum)
+	add_button("Stand the crew a drink (%d gold, +%d morale)" % [DRINK_COST, Morale.DRINK], _stand_drink)
 	add_button("Repair %d hull (%d gold)" % [REPAIR_AMOUNT, REPAIR_COST], _repair)
 	add_button("Buy %d chain shot (%d gold)" % [CHAIN_SHOT_AMOUNT, CHAIN_SHOT_COST], _buy_chain_shot)
+	add_button("Buy %d heated shot (%d gold)" % [HEATED_AMOUNT, HEATED_COST], _buy_heated_shot)
 	add_button("Recruit %d hands (%d gold)" % [RECRUIT_AMOUNT, RECRUIT_COST], _recruit)
 	var roles: Array = Data.get_all("crew")
 	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
 	var role: Dictionary = roles.pick_random()
 	_offer = {"name": str(names.pick_random()), "role": str(role["id"]), "level": 1, "health": 100}
 	_hire_button = add_button("Hire %s, %s (%d gold)" % [_offer["name"], str(role.get("name", "")).to_lower(), HIRE_COST], _hire)
+	var run: RunState = GameState.run
+	if run.prisoners > 0:
+		_ransom_button = add_button("Ransom %d prisoners (%d gold)" % [run.prisoners, run.prisoners * RANSOM_EACH], _ransom)
 	add_button("Leave port", GameState.finish_node)
 
 
 func refresh() -> void:
 	_info.text = run_summary()
+	if _deserted > 0:
+		_info.text += "\n%d sullen hands deserted when we made port." % _deserted
 
 
 func _repair() -> void:
@@ -39,6 +59,42 @@ func _repair() -> void:
 		return
 	run.gold -= REPAIR_COST
 	run.hull = mini(run.max_hull, run.hull + REPAIR_AMOUNT)
+	refresh()
+
+
+func _buy_heated_shot() -> void:
+	var run: RunState = GameState.run
+	if run.gold < HEATED_COST:
+		return
+	run.gold -= HEATED_COST
+	run.ammo["heated_shot"] = int(run.ammo.get("heated_shot", 0)) + HEATED_AMOUNT
+	refresh()
+
+
+func _buy_rum() -> void:
+	var run: RunState = GameState.run
+	if run.gold < RUM_COST:
+		return
+	run.gold -= RUM_COST
+	run.rum += RUM_AMOUNT
+	refresh()
+
+
+func _stand_drink() -> void:
+	var run: RunState = GameState.run
+	if run.gold < DRINK_COST or run.morale >= 100:
+		return
+	run.gold -= DRINK_COST
+	Morale.change(run, Morale.DRINK)
+	refresh()
+
+
+func _ransom() -> void:
+	var run: RunState = GameState.run
+	run.gold += run.prisoners * RANSOM_EACH
+	run.prisoners = 0
+	_ransom_button.disabled = true
+	_ransom_button.text = "Prisoners ransomed"
 	refresh()
 
 

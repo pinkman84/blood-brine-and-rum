@@ -4,7 +4,7 @@ extends RefCounted
 ## for saving. When you add a field, add it to to_dict() and from_dict().
 
 const SEAS_PER_RUN := 5
-const NODES_PER_SEA := 7
+const NODES_PER_SEA := SeaMapGen.LAYERS  # steps from a sea's entrance to its exit
 const START_HANDS := 0.8  # a run starts with this share of the ship's hands
 
 var run_seed: int = 0
@@ -20,6 +20,13 @@ var hands: int = 0  # general crew: a resource, not individuals
 var max_hands: int = 0
 var crew: Array[Dictionary] = []  # specialists, each { name, role, level, health, post? }
 var ammo: Dictionary = {}  # ammo id -> rounds
+var prisoners: int = 0  # held below for ransom at a trading post
+var morale: int = Morale.START
+var rum: int = Morale.START_RUM  # rations; the crew drinks one per node
+var days: int = 0  # days at sea this run; one per node
+var map: Dictionary = {}  # this sea's node map (SeaMapGen); empty until first shown
+var elite_pending := false  # the next battle is the sea's exit fight
+var last_note := ""  # a line to show on the map when we return to it
 var battles_won: int = 0
 
 
@@ -65,6 +72,12 @@ func to_dict() -> Dictionary:
 		"max_hands": max_hands,
 		"crew": crew,
 		"ammo": ammo,
+		"prisoners": prisoners,
+		"morale": morale,
+		"rum": rum,
+		"days": days,
+		"map": map,
+		"elite_pending": elite_pending,
 		"battles_won": battles_won,
 	}
 
@@ -95,6 +108,12 @@ static func from_dict(data: Dictionary) -> RunState:
 	for ammo_id: Variant in saved_ammo:
 		run.ammo[str(ammo_id)] = int(saved_ammo[ammo_id])
 	run.battles_won = int(data.get("battles_won", 0))
+	run.prisoners = int(data.get("prisoners", 0))
+	run.morale = int(data.get("morale", Morale.START))
+	run.rum = int(data.get("rum", Morale.START_RUM))
+	run.days = int(data.get("days", 0))
+	run.map = data.get("map", {})
+	run.elite_pending = bool(data.get("elite_pending", false))
 	return run
 
 
