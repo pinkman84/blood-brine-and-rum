@@ -3,7 +3,9 @@ extends RefCounted
 ## The event system: picking an event, checking a choice's requirements, and
 ## applying an outcome's effects to the run. Events live in data/events.
 ##
-## Event:   { id, title, text, weight?, seas?: [ids], min_sea?, max_sea?, choices: [...] }
+## Event:   { id, title, text, weight?, seas?: [ids], min_sea?, max_sea?, pool?, choices: [...] }
+##   pool: which kind of node draws it. None for "?" event nodes; "storm" and
+##   "treasure" for those nodes; "mutiny" is only ever forced (GameState).
 ## Choice:  { text, requires?: {...}, outcomes: [ { chance?, text, effects: {...} } ] }
 ##
 ## requires (all must hold):
@@ -18,21 +20,23 @@ extends RefCounted
 ##   wound: health a random specialist loses (they can die)
 ##   join: a specialist role id, or "random", who joins if there's a free slot
 ##   battle: "random" (this sea's mix) or an enemy id; the node becomes a fight
+##   days: time lost; each day drinks a rum ration and lets the Company hunt grow
+##   end_run: true; the voyage is over (the event screen ends the run)
 
 const DEFAULT_WEIGHT := 1.0
 
 
-## A random event fit for this sea that hasn't happened yet this run.
-static func pick(run: RunState) -> Dictionary:
-	var candidates: Array = []
-	var total := 0.0
-	for e: Dictionary in Data.get_all("events"):
-		if not _fits(run, e):
-			continue
-		candidates.append(e)
-		total += float(e.get("weight", DEFAULT_WEIGHT))
+## A random event from this pool, fit for this sea, that hasn't happened yet
+## this run. Storms and treasure can repeat once every one has been seen.
+static func pick(run: RunState, pool := "") -> Dictionary:
+	var candidates := _candidates(run, pool, false)
+	if candidates.is_empty() and pool != "":
+		candidates = _candidates(run, pool, true)
 	if candidates.is_empty():
 		return {}
+	var total := 0.0
+	for e: Dictionary in candidates:
+		total += float(e.get("weight", DEFAULT_WEIGHT))
 	var roll := randf() * total
 	for e: Dictionary in candidates:
 		roll -= float(e.get("weight", DEFAULT_WEIGHT))
@@ -41,8 +45,16 @@ static func pick(run: RunState) -> Dictionary:
 	return candidates.back()
 
 
-static func _fits(run: RunState, e: Dictionary) -> bool:
-	if run.seen_events.has(e["id"]):
+static func _candidates(run: RunState, pool: String, allow_seen: bool) -> Array:
+	var found: Array = []
+	for e: Dictionary in Data.get_all("events"):
+		if str(e.get("pool", "")) == pool and _fits(run, e, allow_seen):
+			found.append(e)
+	return found
+
+
+static func _fits(run: RunState, e: Dictionary, allow_seen: bool) -> bool:
+	if run.seen_events.has(e["id"]) and not allow_seen:
 		return false
 	var seas: Array = e.get("seas", [])
 	if not seas.is_empty() and not seas.has(run.sea_id):
@@ -130,6 +142,14 @@ static func apply(run: RunState, effects: Dictionary) -> Array[String]:
 		var before := run.hunt
 		Voyage.change_hunt(run, hunt)
 		lines.append("Company hunt %+d%%" % (run.hunt - before))
+	var days := int(effects.get("days", 0))
+	if days > 0:
+		var rum_before := run.rum
+		var hunt_before := run.hunt
+		run.days += days
+		run.rum = maxi(0, run.rum - days)
+		Voyage.change_hunt(run, days * Voyage.HUNT_PER_DAY)
+		lines.append("%d day%s lost (%+d rum, Company hunt %+d%%)" % [days, "" if days == 1 else "s", run.rum - rum_before, run.hunt - hunt_before])
 	var p := int(effects.get("prisoners", 0))
 	if p != 0:
 		var before := run.prisoners

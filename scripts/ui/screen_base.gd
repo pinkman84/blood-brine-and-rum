@@ -85,7 +85,7 @@ func add_button(text: String, action: Callable, enabled := true) -> Button:
 	button.text = text
 	button.disabled = not enabled
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.clip_text = true
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long choices wrap onto a second line
 	button.pressed.connect(action)
 	_buttons.add_child(button)
 	return button

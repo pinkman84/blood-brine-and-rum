@@ -5,13 +5,14 @@ extends RefCounted
 ## High morale speeds every timing a little and makes boarders fight harder;
 ## low morale slows everything, and in port unhappy hands desert. Rum is
 ## drunk one ration per node; running dry hurts morale.
-## Later: a mutiny event below MUTINY, and pirate havens for rest and
-## recreation (see the plan, Phase 5).
+## Below MUTINY the crew rise up (the "mutiny" event, at most once every
+## MUTINY_GAP days; see GameState.finish_node).
 
 const START := 70
 const HIGH := 75
 const LOW := 40
 const MUTINY := 20
+const MUTINY_GAP := 3  # days between mutinies
 
 const START_RUM := 10
 const NO_RUM := -6  # each node sailed with an empty rum cask

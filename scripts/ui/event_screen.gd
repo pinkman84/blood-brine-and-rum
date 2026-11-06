@@ -2,11 +2,14 @@ extends ScreenBase
 ## An event node: a scene, a few choices, and what came of the one you made.
 ## Choices whose requirements you don't meet show greyed out with the reason.
 ## The rules live in scripts/core/events.gd; the events in data/events.
+## Storm and treasure nodes draw from their own pools. A forced event (a
+## mutiny) happens between nodes, so it returns to the map without moving on.
 
 var _event: Dictionary = {}
 var _result_lines: Array[String] = []
 var _result_text := ""
 var _battle := ""  # set if the outcome turned into a fight
+var _interlude := false  # a forced event between nodes (see GameState.finish_node)
 
 
 func _title() -> String:
@@ -14,10 +17,24 @@ func _title() -> String:
 
 
 func _ready() -> void:
-	_event = Events.pick(GameState.run)
-	if not _event.is_empty():
-		GameState.run.seen_events.append(_event["id"])
+	var run: RunState = GameState.run
+	if run.forced_event != "" and Data.has_item("events", run.forced_event):
+		_event = Data.get_item("events", run.forced_event)
+		_interlude = true
+	else:
+		_event = Events.pick(run, _pool(run))
+	if not _event.is_empty() and not _interlude:
+		run.seen_events.append(_event["id"])
 	super()
+
+
+## Which pool this node draws from: "storm", "treasure", or "" for a "?" node.
+func _pool(run: RunState) -> String:
+	var here := int(run.map.get("current", -1))
+	if here < 0:
+		return ""
+	var type := str(run.map["nodes"][here].get("type", ""))
+	return type if type == "storm" or type == "treasure" else ""
 
 
 func _build() -> void:
@@ -51,7 +68,14 @@ func _choose(choice: Dictionary) -> void:
 	_battle = str(effects.get("battle", ""))
 	for button in _buttons.get_children():
 		button.queue_free()
-	if _battle != "":
+	GameState.run.forced_event = ""
+	if bool(effects.get("end_run", false)):
+		add_button("Over the side...", GameState.end_run.bind(false))
+		refresh()
+		return
+	if _interlude:
+		add_button("Back to the helm", GameState.resume_map)
+	elif _battle != "":
 		if _battle != "random":
 			GameState.run.forced_enemy = _battle
 		add_button("Clear for action!", GameState.change_screen.bind(GameState.Screen.BATTLE))
