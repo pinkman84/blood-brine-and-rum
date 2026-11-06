@@ -31,6 +31,8 @@ var sea_id := ""  # which sea we're in (data/seas)
 var route: Array = []  # sea ids sailed so far, in order
 var hunt: int = 0  # the Company's hunt for us, 0 to 100 (see Voyage)
 var hunter_pending := false  # the next battle is a Company hunter
+var forced_enemy := ""  # an event chose who we fight next (an enemy id)
+var seen_events: Array = []  # event ids already met this run (no repeats)
 var battles_won: int = 0
 
 
@@ -86,6 +88,8 @@ func to_dict() -> Dictionary:
 		"route": route,
 		"hunt": hunt,
 		"hunter_pending": hunter_pending,
+		"forced_enemy": forced_enemy,
+		"seen_events": seen_events,
 		"battles_won": battles_won,
 	}
 
@@ -126,6 +130,8 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.route = data.get("route", [])
 	run.hunt = int(data.get("hunt", 0))
 	run.hunter_pending = bool(data.get("hunter_pending", false))
+	run.forced_enemy = str(data.get("forced_enemy", ""))
+	run.seen_events = data.get("seen_events", [])
 	if run.sea_id == "":  # saves from before the sea chart
 		run.sea_id = Voyage.START_SEA
 		run.route = [Voyage.START_SEA]
