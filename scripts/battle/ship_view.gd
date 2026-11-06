@@ -36,6 +36,8 @@ var _holes: Array[Vector2] = []
 var _sail_holes: Array[Vector2] = []
 var _time := randf() * TAU
 var _struck := false
+var _rubble: Array[Rect2] = []  # breaches in a fallen fort's walls
+var _shape := "ship"  # or "fort" (from the layout)
 
 
 func setup(data: Dictionary) -> void:
@@ -44,6 +46,7 @@ func setup(data: Dictionary) -> void:
 	flag_color = Color.from_string(str(data.get("flag_color", "")), flag_color)
 	guns_per_side = int(data.get("guns_per_side", 4))
 	var layout := Data.get_item("layouts", str(data.get("layout", "sloop")))
+	_shape = str(layout.get("shape", "ship"))
 	_grid = Vector2(float(layout.get("cols", 3)), float(layout.get("rows", 8))) * CELL
 	var origin := -_grid / 2.0
 	rooms.clear()
@@ -64,7 +67,7 @@ func setup(data: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	position = base_position + Vector2(0, roundf(sin(_time * 1.3)))
+	position = base_position + (Vector2.ZERO if _shape == "fort" else Vector2(0, roundf(sin(_time * 1.3))))
 	queue_redraw()  # crew move every frame
 
 
@@ -74,16 +77,19 @@ func _draw() -> void:
 	var hw := half_width()
 	var top := -_grid.y / 2.0 - HULL_MARGIN
 	var bottom := _grid.y / 2.0 + HULL_MARGIN
-	var hull := PackedVector2Array([
-		Vector2(0, top - BOW_LENGTH), Vector2(hw * 0.7, top - BOW_LENGTH * 0.45),
-		Vector2(hw, top + 8), Vector2(hw, bottom - 6), Vector2(hw - 6, bottom),
-		Vector2(-hw + 6, bottom), Vector2(-hw, bottom - 6), Vector2(-hw, top + 8),
-		Vector2(-hw * 0.7, top - BOW_LENGTH * 0.45),
-	])
-	draw_colored_polygon(hull, hull_color)
-	var outline := hull.duplicate()
-	outline.append(hull[0])
-	draw_polyline(outline, wall_color, 2.0)
+	if _shape == "fort":
+		_draw_fort(hw, top, bottom)
+	else:
+		var hull := PackedVector2Array([
+			Vector2(0, top - BOW_LENGTH), Vector2(hw * 0.7, top - BOW_LENGTH * 0.45),
+			Vector2(hw, top + 8), Vector2(hw, bottom - 6), Vector2(hw - 6, bottom),
+			Vector2(-hw + 6, bottom), Vector2(-hw, bottom - 6), Vector2(-hw, top + 8),
+			Vector2(-hw * 0.7, top - BOW_LENGTH * 0.45),
+		])
+		draw_colored_polygon(hull, hull_color)
+		var outline := hull.duplicate()
+		outline.append(hull[0])
+		draw_polyline(outline, wall_color, 2.0)
 
 	var font := ThemeDB.fallback_font
 	for room in rooms:
@@ -127,6 +133,25 @@ func _draw() -> void:
 			draw_rect(bar, Color(0, 0, 0, 0.7))
 			var fill := Color("2ecc71") if ratio > 0.5 else (Color("f1c40f") if ratio > 0.25 else Color("e74c3c"))
 			draw_rect(Rect2(bar.position, Vector2(roundf(10 * ratio), 2)), fill)
+
+
+## A shore fort: sandy ground, thick stone walls and a bastion at each corner.
+func _draw_fort(hw: float, top: float, bottom: float) -> void:
+	draw_rect(Rect2(-hw - 30, top - 30, hw * 2 + 60, bottom - top + 60), Color("b8a47a"))  # the shore
+	var walls := Rect2(-hw, top, hw * 2, bottom - top)
+	draw_rect(walls, hull_color)
+	draw_rect(walls, wall_color, false, 3.0)
+	for corner in [walls.position, Vector2(walls.end.x, walls.position.y), Vector2(walls.position.x, walls.end.y), walls.end]:
+		var bastion := Rect2(corner - Vector2(9, 9), Vector2(18, 18))
+		draw_rect(bastion, hull_color.darkened(0.15))
+		draw_rect(bastion, wall_color, false, 2.0)
+	for r in _rubble:
+		draw_rect(r, Color("2a2622"))
+		draw_rect(r.grow(-2), Color("5a544c"))
+	# Flagstaff on the seaward wall: the owner's colours, or white once she yields.
+	var staff := Vector2(0, top - 4)
+	draw_line(staff, staff + Vector2(0, -16), Color("3b2a1a"), 2.0)
+	draw_rect(Rect2(staff + Vector2(1, -16), Vector2(10, 6)), Color.WHITE if _struck else flag_color)
 
 
 func _draw_room_state(rect: Rect2, state: Dictionary) -> void:
@@ -242,6 +267,21 @@ func crew_at(local_point: Vector2) -> BattleCrew:
 func strike_colours() -> void:
 	_struck = true
 	modulate = Color(0.85, 0.85, 0.85)
+
+
+## A fort is beaten: white flag, scorched stone, breaches in the walls.
+func ruin() -> void:
+	strike_colours()
+	modulate = Color(0.75, 0.72, 0.7)
+	var hw := half_width()
+	var top := -_grid.y / 2.0 - HULL_MARGIN
+	var bottom := _grid.y / 2.0 + HULL_MARGIN
+	for i in 6:
+		var at := Vector2(randf_range(-hw, hw), top if randf() < 0.5 else bottom)
+		if randf() < 0.5:  # a breach in a side wall instead
+			at = Vector2(hw if randf() < 0.5 else -hw, randf_range(top, bottom))
+		_rubble.append(Rect2(at - Vector2(5, 5), Vector2(randf_range(8, 13), randf_range(8, 13))))
+		add_hole(random_hit_point())
 
 
 ## Hook for showing crew losses on the ship. Nothing yet; 2c adds wounds.

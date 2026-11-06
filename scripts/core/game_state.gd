@@ -5,7 +5,7 @@ extends Node
 ## into here (start a run, finish a node, end the run) and never load each
 ## other directly.
 
-enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART }
+enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN }
 
 const SCREEN_SCENES := {
 	Screen.MENU: "res://scenes/ui/menu.tscn",
@@ -15,6 +15,7 @@ const SCREEN_SCENES := {
 	Screen.SHOP: "res://scenes/ui/shop.tscn",
 	Screen.GAME_OVER: "res://scenes/ui/game_over.tscn",
 	Screen.SEA_CHART: "res://scenes/map/sea_chart.tscn",
+	Screen.HAVEN: "res://scenes/ui/haven.tscn",
 }
 
 const STARTING_SHIP := "sloop"
@@ -58,6 +59,7 @@ func continue_run() -> void:
 
 ## Call when the player finishes a node. Moves on, saves, and returns to the map.
 func finish_node() -> void:
+	run.port_taken = false
 	# A day's sailing: the crew drinks its rum ration, or grumbles without one.
 	if run.rum > 0:
 		run.rum -= 1

@@ -10,6 +10,22 @@
       "navy": 2,
       "company": 2,
       "slavers": 1
+    },
+    "settlements": [
+      "Port Royal",
+      "Tortuga Landing",
+      "Bridgetown",
+      "Santo Domingo"
+    ],
+    "havens": [
+      "Nassau",
+      "Tortuga"
+    ],
+    "port_owners": {
+      "brotherhood": 3,
+      "navy": 3,
+      "company": 1,
+      "slavers": 1
     }
   },
   {
@@ -20,6 +36,19 @@
     "description": "Open ocean and Navy convoys. Long days between landfalls.",
     "factions": {
       "navy": 3,
+      "company": 2,
+      "rivals": 1
+    },
+    "settlements": [
+      "Ponta Delgada",
+      "Funchal",
+      "Horta"
+    ],
+    "havens": [
+      "Bermuda Cove"
+    ],
+    "port_owners": {
+      "navy": 4,
       "company": 2,
       "rivals": 1
     }
@@ -35,6 +64,19 @@
       "navy": 1,
       "company": 1,
       "rivals": 1
+    },
+    "settlements": [
+      "Cape Coast",
+      "Gor\u00e9e",
+      "Ouidah"
+    ],
+    "havens": [
+      "Sherbro Island"
+    ],
+    "port_owners": {
+      "slavers": 4,
+      "company": 2,
+      "navy": 1
     }
   },
   {
@@ -46,6 +88,17 @@
     "factions": {
       "company": 3,
       "rivals": 1
+    },
+    "settlements": [
+      "Table Bay",
+      "False Bay"
+    ],
+    "havens": [
+      "Smugglers' Bay"
+    ],
+    "port_owners": {
+      "company": 4,
+      "navy": 1
     }
   },
   {
@@ -58,6 +111,19 @@
       "company": 4,
       "rivals": 2,
       "navy": 1
+    },
+    "settlements": [
+      "Bombay Castle",
+      "Calicut",
+      "Fort St George"
+    ],
+    "havens": [
+      "Libertalia",
+      "\u00cele Sainte-Marie"
+    ],
+    "port_owners": {
+      "company": 3,
+      "brotherhood": 3
     }
   },
   {
@@ -69,6 +135,19 @@
     "factions": {
       "company": 3,
       "rivals": 3
+    },
+    "settlements": [
+      "Bantam",
+      "Amboina",
+      "Banda Neira"
+    ],
+    "havens": [
+      "Black Reef"
+    ],
+    "port_owners": {
+      "company": 4,
+      "brotherhood": 1,
+      "rivals": 1
     }
   },
   {
@@ -80,6 +159,17 @@
     "factions": {
       "company": 5,
       "navy": 1
+    },
+    "settlements": [
+      "Canton Factory",
+      "Macao",
+      "Manila"
+    ],
+    "havens": [
+      "Lantau Hideaway"
+    ],
+    "port_owners": {
+      "company": 5
     }
   }
 ]
