@@ -49,7 +49,10 @@
               "hull": 8
             }
           }
-        ]
+        ],
+        "requires": {
+          "gold": 10
+        }
       },
       {
         "text": "Trade stories over grog",
@@ -104,6 +107,658 @@
           }
         ]
       }
+    ]
+  },
+  {
+    "id": "navy_inspection",
+    "title": "A Navy sloop signals",
+    "text": "A Navy sloop runs up a signal: heave to and prepare to be inspected. Your flag is not the one they're looking for. Yet.",
+    "choices": [
+      {
+        "text": "Bluff it out with forged papers",
+        "outcomes": [
+          {
+            "text": "The lieutenant squints, stamps, and waves you on. Close.",
+            "effects": {
+              "morale": 2
+            },
+            "chance": 3
+          },
+          {
+            "text": "The lieutenant isn't fooled. Run out the guns!",
+            "effects": {
+              "battle": "navy_cutter"
+            },
+            "chance": 2
+          }
+        ]
+      },
+      {
+        "text": "Bribe the lieutenant (25 gold)",
+        "outcomes": [
+          {
+            "text": "Gold changes hands. You were never here.",
+            "effects": {
+              "gold": -25,
+              "hunt": -10
+            }
+          }
+        ],
+        "requires": {
+          "gold": 25
+        }
+      },
+      {
+        "text": "Run out the guns",
+        "outcomes": [
+          {
+            "text": "No sense waiting for them to make up their minds.",
+            "effects": {
+              "battle": "navy_cutter",
+              "morale": 3
+            }
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "caribbean",
+      "atlantic"
+    ]
+  },
+  {
+    "id": "castaway",
+    "title": "A castaway",
+    "text": "A wild-bearded figure on a spit of sand, waving a shirt on a stick. He claims to have been a ship's surgeon, before the mutiny.",
+    "choices": [
+      {
+        "text": "Take him aboard",
+        "outcomes": [
+          {
+            "text": "He was telling the truth, mostly.",
+            "effects": {
+              "join": "surgeon"
+            },
+            "chance": 3
+          },
+          {
+            "text": "He was a ship's cook. He can still swing a cleaver.",
+            "effects": {
+              "hands": 1,
+              "morale": 2
+            },
+            "chance": 2
+          }
+        ]
+      },
+      {
+        "text": "Leave him a cask of water",
+        "outcomes": [
+          {
+            "text": "He curses you all the way to the horizon.",
+            "effects": {
+              "rum": -1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "company_straggler",
+    "title": "A Company straggler",
+    "text": "A Company merchantman, her foremast sprung, wallowing alone. Her crew hasn't seen you yet.",
+    "choices": [
+      {
+        "text": "Attack while she's crippled",
+        "outcomes": [
+          {
+            "text": "You come down on her out of the sun.",
+            "effects": {
+              "battle": "company_merchantman",
+              "hunt": 5
+            }
+          }
+        ]
+      },
+      {
+        "text": "Shadow her and let her lead you to the convoy route",
+        "outcomes": [
+          {
+            "text": "She limps home and you learn the Company's lanes.",
+            "effects": {
+              "hunt": -5,
+              "morale": 1
+            },
+            "chance": 2
+          },
+          {
+            "text": "She spots you and signals. Every Company ship for leagues knows your sail.",
+            "effects": {
+              "hunt": 12
+            },
+            "chance": 1
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "indian_ocean",
+      "spice_islands",
+      "cape_of_storms",
+      "south_china_sea"
+    ]
+  },
+  {
+    "id": "fever_ship",
+    "title": "A ship of the dead",
+    "text": "A brig drifting with her sails in rags. No one at the helm. The smell reaches you before she does.",
+    "choices": [
+      {
+        "text": "Send a party aboard to loot her",
+        "outcomes": [
+          {
+            "text": "Spices and coin, and nothing caught. Lucky.",
+            "effects": {
+              "gold": 30
+            },
+            "chance": 2
+          },
+          {
+            "text": "Fever comes back with the loot.",
+            "effects": {
+              "gold": 20,
+              "hands": -8,
+              "morale": -5
+            },
+            "chance": 2
+          }
+        ]
+      },
+      {
+        "text": "Let your surgeon check her first",
+        "outcomes": [
+          {
+            "text": "The surgeon finds the fever's source and you strip her clean.",
+            "effects": {
+              "gold": 30,
+              "morale": 2
+            }
+          }
+        ],
+        "requires": {
+          "role": "surgeon"
+        }
+      },
+      {
+        "text": "Burn her and sail on",
+        "outcomes": [
+          {
+            "text": "Better safe. The crew mutter about wasted plunder.",
+            "effects": {
+              "morale": -1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rum_smugglers",
+    "title": "Rum smugglers",
+    "text": "A low schooner, gunwales almost awash with casks. Her captain hails you cheerfully: rum for sale, no questions.",
+    "choices": [
+      {
+        "text": "Buy 8 rum (15 gold)",
+        "outcomes": [
+          {
+            "text": "Fine Barbados rum, mostly.",
+            "effects": {
+              "gold": -15,
+              "rum": 8
+            }
+          }
+        ],
+        "requires": {
+          "gold": 15
+        }
+      },
+      {
+        "text": "Take it at gunpoint",
+        "outcomes": [
+          {
+            "text": "They hand it over sullenly. Word gets around.",
+            "effects": {
+              "rum": 8,
+              "morale": 3,
+              "hunt": 3
+            },
+            "chance": 3
+          },
+          {
+            "text": "They'd rather fight. So be it.",
+            "effects": {
+              "battle": "rival_sloop"
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Wave them on",
+        "outcomes": [
+          {
+            "text": "The crew watch the casks go by with longing.",
+            "effects": {
+              "morale": -2
+            }
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "caribbean",
+      "atlantic"
+    ]
+  },
+  {
+    "id": "whirlpool",
+    "title": "Strange waters",
+    "text": "The sea boils ahead, a great slow turning of water around a dark centre.",
+    "choices": [
+      {
+        "text": "Steer around it, the long way",
+        "outcomes": [
+          {
+            "text": "A day lost, but the ship is whole.",
+            "effects": {
+              "rum": -1
+            }
+          }
+        ]
+      },
+      {
+        "text": "Trust your helmsman to skirt the edge",
+        "outcomes": [
+          {
+            "text": "The helmsman threads the edge like a needle. The crew cheer.",
+            "effects": {
+              "morale": 4
+            }
+          }
+        ],
+        "requires": {
+          "role": "helmsman"
+        }
+      },
+      {
+        "text": "Cut straight past it",
+        "outcomes": [
+          {
+            "text": "You make it, just, with spars cracking.",
+            "effects": {
+              "sails": -6
+            },
+            "chance": 2
+          },
+          {
+            "text": "The current takes you. You claw free with the hull groaning.",
+            "effects": {
+              "hull": -8,
+              "sails": -4
+            },
+            "chance": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "slave_market_ship",
+    "title": "A slaver's tender",
+    "text": "A tender pulling hard for a slaver brig at anchor, low in the water with chained captives.",
+    "choices": [
+      {
+        "text": "Attack the brig",
+        "outcomes": [
+          {
+            "text": "You'll not let this pass.",
+            "effects": {
+              "battle": "slaver_brig",
+              "morale": 4
+            }
+          }
+        ]
+      },
+      {
+        "text": "Cut the tender off and free who you can",
+        "outcomes": [
+          {
+            "text": "You take the tender without a shot. The freed men join you.",
+            "effects": {
+              "hands": 12,
+              "morale": 4
+            },
+            "chance": 2
+          },
+          {
+            "text": "The brig sees you and slips her cable. You free the tender's few.",
+            "effects": {
+              "hands": 5,
+              "morale": 2
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Leave it",
+        "outcomes": [
+          {
+            "text": "The crew are quiet for a long while.",
+            "effects": {
+              "morale": -6
+            }
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "west_africa",
+      "caribbean",
+      "atlantic"
+    ]
+  },
+  {
+    "id": "message_in_bottle",
+    "title": "A message in a bottle",
+    "text": "Bobbing alongside: a bottle, sealed with wax. Inside, a scrap of map and a few words: 'Company payroll, three days east.'",
+    "choices": [
+      {
+        "text": "Follow the map",
+        "outcomes": [
+          {
+            "text": "A Company pay sloop, right where it said.",
+            "effects": {
+              "battle": "company_merchantman"
+            },
+            "chance": 2
+          },
+          {
+            "text": "Nothing there but empty sea and a wasted day.",
+            "effects": {
+              "rum": -1,
+              "morale": -2
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Sell the tip at the next port",
+        "outcomes": [
+          {
+            "text": "A fence pays well for a rumour.",
+            "effects": {
+              "gold": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "storm_warning",
+    "title": "Red sky at morning",
+    "text": "The sky to windward is the colour of a bruise, and the glass is dropping fast.",
+    "choices": [
+      {
+        "text": "Shorten sail and ride it out",
+        "outcomes": [
+          {
+            "text": "A hard night, but you come through.",
+            "effects": {
+              "sails": -3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Run before it under full sail",
+        "outcomes": [
+          {
+            "text": "You fly ahead of the storm and gain a day on the Company.",
+            "effects": {
+              "hunt": -8,
+              "morale": 2
+            },
+            "chance": 2
+          },
+          {
+            "text": "The storm catches you with canvas up.",
+            "effects": {
+              "sails": -10,
+              "hull": -4
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Let the bosun rig storm sails",
+        "outcomes": [
+          {
+            "text": "The bosun knows his trade. Barely a rope frayed.",
+            "effects": {
+              "morale": 2
+            }
+          }
+        ],
+        "requires": {
+          "role": "bosun"
+        }
+      }
+    ],
+    "seas": [
+      "cape_of_storms",
+      "atlantic",
+      "indian_ocean"
+    ]
+  },
+  {
+    "id": "brotherhood_courier",
+    "title": "A Brotherhood courier",
+    "text": "A fast pinnace flying the Brotherhood's black and red. Her captain wants your help: a Navy cutter has been taking Brotherhood prizes.",
+    "choices": [
+      {
+        "text": "Hunt the cutter down",
+        "outcomes": [
+          {
+            "text": "For the Brotherhood!",
+            "effects": {
+              "battle": "navy_cutter",
+              "morale": 3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Give him powder and shot instead",
+        "outcomes": [
+          {
+            "text": "He thanks you with a share of his last prize.",
+            "effects": {
+              "ammo": {
+                "chain_shot": -3
+              },
+              "gold": 20
+            }
+          }
+        ],
+        "requires": {
+          "ammo": {
+            "chain_shot": 3
+          }
+        }
+      },
+      {
+        "text": "Decline",
+        "outcomes": [
+          {
+            "text": "He sails off, disappointed.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "drunken_crew",
+    "title": "Too much grog",
+    "text": "Somebody broached a cask in the night. Half the watch is singing and the other half is asleep at their posts.",
+    "choices": [
+      {
+        "text": "Flog the ringleaders",
+        "outcomes": [
+          {
+            "text": "Order is restored. Nobody's singing now.",
+            "effects": {
+              "morale": -5
+            }
+          }
+        ]
+      },
+      {
+        "text": "Let it pass, and stop their grog for a week",
+        "outcomes": [
+          {
+            "text": "Grumbling, but no blood.",
+            "effects": {
+              "rum": -3,
+              "morale": -1
+            }
+          }
+        ]
+      },
+      {
+        "text": "Join the party",
+        "outcomes": [
+          {
+            "text": "A night to remember, for those who can.",
+            "effects": {
+              "rum": -4,
+              "morale": 6
+            }
+          }
+        ],
+        "requires": {
+          "rum": 4
+        }
+      }
+    ]
+  },
+  {
+    "id": "pearl_divers",
+    "title": "Pearl divers",
+    "text": "A village of pearl divers. The headman offers a pouch of pearls for help against the Company factors who take half their catch.",
+    "choices": [
+      {
+        "text": "Help them",
+        "outcomes": [
+          {
+            "text": "The factors' guard boat is no match for you. The pearls are yours.",
+            "effects": {
+              "gold": 35,
+              "hunt": 8,
+              "morale": 3
+            },
+            "chance": 3
+          },
+          {
+            "text": "The factors had friends. A Company ship arrives.",
+            "effects": {
+              "battle": "company_merchantman",
+              "gold": 20
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Trade for pearls to sell on (10 gold)",
+        "outcomes": [
+          {
+            "text": "A tidy profit.",
+            "effects": {
+              "gold": 12
+            }
+          }
+        ],
+        "requires": {
+          "gold": 10
+        }
+      },
+      {
+        "text": "Sail on",
+        "outcomes": [
+          {
+            "text": "Not your fight.",
+            "effects": {}
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "spice_islands",
+      "indian_ocean"
+    ]
+  },
+  {
+    "id": "deserters",
+    "title": "Navy deserters",
+    "text": "A longboat of half-starved sailors in Navy slops. They've run from a press-gang captain and want to sign with pirates.",
+    "choices": [
+      {
+        "text": "Sign them on",
+        "outcomes": [
+          {
+            "text": "Good seamen, glad of the chance.",
+            "effects": {
+              "hands": 8,
+              "hunt": 4
+            }
+          }
+        ]
+      },
+      {
+        "text": "Hand them back to the Navy for the reward",
+        "outcomes": [
+          {
+            "text": "A bounty paid on every head. Your crew look at you differently now.",
+            "effects": {
+              "gold": 30,
+              "morale": -8,
+              "hunt": -10
+            }
+          }
+        ]
+      },
+      {
+        "text": "Point them to the nearest island",
+        "outcomes": [
+          {
+            "text": "They wave their thanks.",
+            "effects": {
+              "morale": 1
+            }
+          }
+        ]
+      }
+    ],
+    "seas": [
+      "caribbean",
+      "atlantic",
+      "west_africa"
     ]
   }
 ]

@@ -405,6 +405,10 @@ func _pick_enemy(sea: int) -> Dictionary:
 	var hunter := run.hunter_pending or (not elite and randf() < Voyage.hunter_chance(run))
 	run.hunter_pending = false
 	var picked: Dictionary = {}
+	if run.forced_enemy != "" and Data.has_item("enemies", run.forced_enemy):
+		picked = Data.get_item("enemies", run.forced_enemy)  # an event set this fight up
+		hunter = false
+	run.forced_enemy = ""
 	if hunter:
 		var hunters := all.filter(func(e: Dictionary) -> bool: return bool(e.get("hunter", false)))
 		if not hunters.is_empty():
