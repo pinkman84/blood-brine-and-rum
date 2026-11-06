@@ -27,6 +27,10 @@ var days: int = 0  # days at sea this run; one per node
 var map: Dictionary = {}  # this sea's node map (SeaMapGen); empty until first shown
 var elite_pending := false  # the next battle is the sea's exit fight
 var last_note := ""  # a line to show on the map when we return to it
+var sea_id := ""  # which sea we're in (data/seas)
+var route: Array = []  # sea ids sailed so far, in order
+var hunt: int = 0  # the Company's hunt for us, 0 to 100 (see Voyage)
+var hunter_pending := false  # the next battle is a Company hunter
 var battles_won: int = 0
 
 
@@ -78,6 +82,10 @@ func to_dict() -> Dictionary:
 		"days": days,
 		"map": map,
 		"elite_pending": elite_pending,
+		"sea_id": sea_id,
+		"route": route,
+		"hunt": hunt,
+		"hunter_pending": hunter_pending,
 		"battles_won": battles_won,
 	}
 
@@ -114,6 +122,13 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.days = int(data.get("days", 0))
 	run.map = data.get("map", {})
 	run.elite_pending = bool(data.get("elite_pending", false))
+	run.sea_id = str(data.get("sea_id", ""))
+	run.route = data.get("route", [])
+	run.hunt = int(data.get("hunt", 0))
+	run.hunter_pending = bool(data.get("hunter_pending", false))
+	if run.sea_id == "":  # saves from before the sea chart
+		run.sea_id = Voyage.START_SEA
+		run.route = [Voyage.START_SEA]
 	return run
 
 

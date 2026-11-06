@@ -1,0 +1,85 @@
+[
+  {
+    "id": "caribbean",
+    "name": "The Caribbean",
+    "role": "start",
+    "color": "1d3b4f",
+    "description": "Warm shallows, rival crews and Navy patrols. Every pirate starts here.",
+    "factions": {
+      "rivals": 3,
+      "navy": 2,
+      "company": 2,
+      "slavers": 1
+    }
+  },
+  {
+    "id": "atlantic",
+    "name": "The Atlantic Crossing",
+    "role": "middle",
+    "color": "1b2f45",
+    "description": "Open ocean and Navy convoys. Long days between landfalls.",
+    "factions": {
+      "navy": 3,
+      "company": 2,
+      "rivals": 1
+    }
+  },
+  {
+    "id": "west_africa",
+    "name": "The West African Coast",
+    "role": "middle",
+    "color": "2a3a3a",
+    "description": "Slaver country. Ugly work, but every captive freed is a hand gained.",
+    "factions": {
+      "slavers": 4,
+      "navy": 1,
+      "company": 1,
+      "rivals": 1
+    }
+  },
+  {
+    "id": "cape_of_storms",
+    "name": "The Cape of Storms",
+    "role": "middle",
+    "color": "25303d",
+    "description": "Where two oceans meet and fight. Company ships round the Cape heavy with cargo.",
+    "factions": {
+      "company": 3,
+      "rivals": 1
+    }
+  },
+  {
+    "id": "indian_ocean",
+    "name": "The Indian Ocean",
+    "role": "middle",
+    "color": "1a3d4a",
+    "description": "The Company's trade routes, and the pirate havens that feed on them.",
+    "factions": {
+      "company": 4,
+      "rivals": 2,
+      "navy": 1
+    }
+  },
+  {
+    "id": "spice_islands",
+    "name": "The Spice Islands",
+    "role": "middle",
+    "color": "1c4040",
+    "description": "Rich, crowded waters. Company factories and rival crews fighting over the spoils.",
+    "factions": {
+      "company": 3,
+      "rivals": 3
+    }
+  },
+  {
+    "id": "south_china_sea",
+    "name": "The South China Sea",
+    "role": "final",
+    "color": "2b2a3d",
+    "description": "The Company's home waters, and its flagship.",
+    "factions": {
+      "company": 5,
+      "navy": 1
+    }
+  }
+]

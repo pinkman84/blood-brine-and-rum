@@ -36,14 +36,14 @@ func _ready() -> void:
 		SaveSystem.save_run(_run)
 
 	var title := Label.new()
-	title.text = "Sea %d of %d" % [_run.sea_number, RunState.SEAS_PER_RUN]
+	title.text = "Sea %d of %d: %s" % [_run.sea_number, RunState.SEAS_PER_RUN, Voyage.sea_name(_run)]
 	title.add_theme_font_size_override("font_size", 18)
 	title.position = Vector2(12, 8)
 	add_child(title)
 
 	_note = Label.new()
-	_note.position = Vector2(160, 14)
-	_note.size = Vector2(470, 20)
+	_note.position = Vector2(12, 32)
+	_note.size = Vector2(616, 20)
 	_note.text = _run.last_note
 	_run.last_note = ""
 	add_child(_note)
@@ -64,7 +64,8 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), BG_COLOR)
+	draw_rect(Rect2(Vector2.ZERO, size), Color.from_string(str(Voyage.sea(_run).get("color", "")), BG_COLOR))
+	_draw_hunt()
 	var nodes: Array = _run.map["nodes"]
 	var font := ThemeDB.fallback_font
 
@@ -126,8 +127,15 @@ func _sail_to(id: int) -> void:
 	_run.map["current"] = id
 	(_run.map["visited"] as Array).append(id)
 	_run.days += 1
+	Voyage.change_hunt(_run, Voyage.HUNT_PER_DAY)
+	var type := str(node["type"])
+	if _run.hunt >= Voyage.INTERCEPT and type != "elite":
+		# The hunt has found us: whatever was waiting here, a Company hunter is upon us.
+		_run.hunter_pending = true
+		_run.hunt = Voyage.AFTER_INTERCEPT
+		type = "battle"
 	SaveSystem.save_run(_run)
-	match str(node["type"]):
+	match type:
 		"battle":
 			GameState.change_screen(GameState.Screen.BATTLE)
 		"elite":
@@ -144,6 +152,17 @@ func _sail_to(id: int) -> void:
 
 
 # --- Helpers ----------------------------------------------------------------
+
+## The Company's hunt as a bar in the top-right corner.
+func _draw_hunt() -> void:
+	var bar := Rect2(470, 12, 158, 6)
+	draw_rect(bar, Color(0, 0, 0, 0.5))
+	var share := float(_run.hunt) / Voyage.INTERCEPT
+	var colour := Color("e67e22") if _run.hunt < Voyage.HUNTED else Color("e74c3c")
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * share, bar.size.y)), colour)
+	draw_string(ThemeDB.fallback_font, Vector2(470, 30), "Company hunt %d%%" % _run.hunt,
+		HORIZONTAL_ALIGNMENT_LEFT, 158, 10, Color(1, 1, 1, 0.8))
+
 
 func _pos(node: Dictionary) -> Vector2:
 	var p: Array = node["pos"]
