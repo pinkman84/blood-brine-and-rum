@@ -45,10 +45,19 @@ const PARTY_SIZES := [0.33, 0.5, 1.0]  # shares of your hands you can send acros
 const PARTY_LABELS := ["a third", "half", "all hands"]
 const AI_BOARD_DELAY := 1.5  # seconds an enemy captain waits once lashed before boarding
 const PRISONER_RANSOM := 2  # gold per prisoner at a trading post
+const RAID_HUNT := 15  # Company hunt for sacking a town
+const RAID_MORALE := 5
+const FORT_FALL_TIME := 3.0  # seconds of smoke and the banner before the result
+const FORT_SMOKE_EVERY := 0.3  # a fallen fort keeps smouldering
 const ELITE_BOOST := 1.3  # a sea's exit captain: this much more hull and hands
 const ELITE_GOLD := 2.0
 const SURVIVOR_SHARE := 0.4  # roughly this share of a sunk ship's hands can be pulled from the water
-const DEBUG_BOARDING := true  # shows a "Lash now" test button (B key); set false to hide  # chance the enemy comes about after firing, if the other side is ready
+const DEBUG_BOARDING := true  # shows a "Lash now" test button (B key); set false to hide
+const DEBUG_CHEATS := true  # shows a "God mode" test button (T key); set false to hide
+const CHEAT_HULL := 999
+const CHEAT_HANDS := 999
+const CHEAT_RELOAD := 1.0  # seconds per broadside
+const CHEAT_AMMO := 99
 const WATER_COLOR := Color("2f5a73")
 const SINK_TIME := 2.5
 const CARPENTER_REPAIR := 3  # hull each carpenter patches after a win
@@ -70,6 +79,7 @@ var _selected: BattleCrew = null
 
 var _arena: Node2D
 var _vfx: BattleVfx
+var _ui_root: Control  # the battle UI, for the fallen-fort banner
 var _player_view: ShipView
 var _enemy_view: ShipView
 
@@ -113,6 +123,8 @@ var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
 var _start_hands := 0
 var _intro_note := ""  # shown once the battle screen is built
+var _cheat_button: Button
+static var _cheats_on := false  # testing: stays on for the rest of the session once pressed
 
 
 func _ready() -> void:
@@ -121,6 +133,8 @@ func _ready() -> void:
 	var ship_data := Data.get_item("ships", run.ship_id)
 	_enemy_data = _pick_enemy(run.sea_number)
 	player = BattleShip.from_run(run, ship_data)
+	if _cheats_on:
+		_apply_cheats()
 	_start_hands = player.hands
 	enemy = BattleShip.from_enemy(_enemy_data)
 	for side: String in BattleShip.SIDES:  # so the first volleys don't land together
@@ -221,6 +235,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_grapple_pressed()
 	elif key.keycode == KEY_B and DEBUG_BOARDING:
 		_on_debug_lash_pressed()
+	elif key.keycode == KEY_T and DEBUG_CHEATS:
+		_on_cheat_pressed()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -377,6 +393,8 @@ func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
 			if side == ship.engaged_side:
 				aim_bonus += c.buff("accuracy", 0.0)
 		ship.gun_factors[side] = hands * _room_efficiency(ship, view.gun_room(side)) * reload_buff * powder
+		if _cheats_on and ship == player:
+			ship.gun_factors[side] = 1.0  # exactly CHEAT_RELOAD seconds, whatever the damage
 	# Point-blank as the hooks draw the ships together: easier to hit.
 	ship.accuracy = ship.base_accuracy + aim_bonus + Boarding.CLOSE_ACCURACY * _boarding.closeness()
 
@@ -406,8 +424,11 @@ func _pick_enemy(sea: int) -> Dictionary:
 	run.hunter_pending = false
 	var picked: Dictionary = {}
 	if run.forced_enemy != "" and Data.has_item("enemies", run.forced_enemy):
-		picked = Data.get_item("enemies", run.forced_enemy)  # an event set this fight up
+		picked = Data.get_item("enemies", run.forced_enemy)  # an event or port set this fight up
 		hunter = false
+		if run.port_owner != "":
+			picked = _port_fort(picked, run.port_owner)
+			run.port_owner = ""
 	run.forced_enemy = ""
 	if hunter:
 		var hunters := all.filter(func(e: Dictionary) -> bool: return bool(e.get("hunter", false)))
@@ -417,7 +438,7 @@ func _pick_enemy(sea: int) -> Dictionary:
 	if picked.is_empty():
 		# The sea's exit fight may draw from one sea ahead.
 		var reach := sea + (1 if elite else 0)
-		var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= reach and not bool(e.get("hunter", false)))
+		var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= reach and not bool(e.get("special", false)))
 		if options.is_empty():
 			options = all
 		picked = _weighted_by_sea(options, run)
@@ -435,6 +456,22 @@ func _pick_enemy(sea: int) -> Dictionary:
 		boosted["accuracy"] = float(boosted["accuracy"]) + 0.05
 		boosted["gold_reward"] = roundi(int(boosted["gold_reward"]) * ELITE_GOLD)
 	return boosted
+
+
+## The harbour fort, dressed for whoever owns the port (factions "port").
+func _port_fort(base: Dictionary, owner: String) -> Dictionary:
+	var port: Dictionary = Data.get_item("factions", owner).get("port", {})
+	var fort := base.duplicate(true)
+	var strength := float(port.get("fort_strength", 1.0))
+	fort["faction"] = owner
+	fort["name"] = str(port.get("fort_name", fort.get("name", "Fort")))
+	fort["max_hull"] = roundi(int(base.get("max_hull", 50)) * strength)
+	fort["max_hands"] = roundi(int(base.get("max_hands", 120)) * strength)
+	fort["gold_reward"] = roundi(int(base.get("gold_reward", 40)) * float(port.get("plunder", 1.0)))
+	fort["captives"] = int(port.get("captives", 0))
+	fort["raid_morale"] = int(port.get("raid_morale", RAID_MORALE))
+	fort["raid_hunt"] = int(port.get("raid_hunt", RAID_HUNT))
+	return fort
 
 
 ## Picks from the candidates by this sea's faction weights (data/seas "factions").
@@ -456,7 +493,7 @@ func _weighted_by_sea(options: Array, run: RunState) -> Dictionary:
 ## Orders a ship to come about. Turn speed and the chance of stalling come
 ## from the helm's condition, the hands, and any helmsman at the helm.
 func _come_about(ship: BattleShip, view: ShipView, crew: Array) -> void:
-	if ship.turning or _boarding.is_lashed():
+	if ship.turning or _boarding.is_lashed() or ship.is_static:
 		return
 	var helm_room: Dictionary = {}
 	for room in view.rooms:
@@ -592,6 +629,32 @@ func _on_grapple_pressed() -> void:
 	else:
 		_throw(player)
 	_refresh_ui()
+
+
+## Testing only: hull and hands to 999, one-second reloads, 99 of every shot.
+## Hull and hands carry into the run; reloads stay fast for the rest of the session.
+func _on_cheat_pressed() -> void:
+	if _over:
+		return
+	_cheats_on = true
+	_apply_cheats()
+	_log("TEST: god mode. Hull and hands %d, %ds reloads, %d of every shot." % [CHEAT_HULL, int(CHEAT_RELOAD), CHEAT_AMMO])
+	_refresh_ui()
+
+
+func _apply_cheats() -> void:
+	var run: RunState = GameState.run
+	run.max_hull = maxi(run.max_hull, CHEAT_HULL)
+	run.max_hands = maxi(run.max_hands, CHEAT_HANDS)
+	player.max_hull = run.max_hull
+	player.hull = player.max_hull
+	player.max_hands = run.max_hands
+	player.hands = player.max_hands
+	player.reload_time = CHEAT_RELOAD
+	for side: String in BattleShip.SIDES:
+		player.reloads[side] = minf(float(player.reloads[side]), CHEAT_RELOAD)
+	for a: Dictionary in Data.get_all("ammo"):
+		player.ammo[str(a["id"])] = maxi(int(player.ammo.get(str(a["id"]), 0)), CHEAT_AMMO)
 
 
 ## Testing only: skip the grappling and lash the ships together right away.
@@ -854,7 +917,11 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 func _check_end() -> void:
 	if _over:
 		return
-	if enemy.hull <= 0:
+	if enemy.is_static and (enemy.hull <= 0 or enemy.hands + _party_of(enemy) <= 0):
+		_over = true
+		_fort_falls()  # forts don't sink: the walls are breached and the flag comes down
+		get_tree().create_timer(FORT_FALL_TIME, false).timeout.connect(_show_victory.bind(enemy.hull > 0))
+	elif enemy.hull <= 0:
 		_over = true
 		_sink(_enemy_view)
 		get_tree().create_timer(SINK_TIME, false).timeout.connect(_show_victory.bind(false))
@@ -895,6 +962,58 @@ func _sink(view: ShipView) -> void:
 		get_tree().create_timer(i * 0.35, false).timeout.connect(_vfx.impact.bind(at))
 
 
+## A beaten fort: a last few blasts, the walls broken, the white flag up, and
+## smoke that keeps rising while we decide what to do with the town.
+func _fort_falls() -> void:
+	_select(null)
+	_enemy_view.ruin()
+	for i in 5:
+		var at := _enemy_view.transform * _enemy_view.random_hit_point()
+		get_tree().create_timer(i * 0.3, false).timeout.connect(_vfx.impact.bind(at))
+	var smoke := Timer.new()
+	smoke.wait_time = FORT_SMOKE_EVERY
+	smoke.autostart = true
+	smoke.timeout.connect(_fort_smoke)
+	_arena.add_child(smoke)
+	_fort_banner()
+
+
+func _fort_smoke() -> void:
+	_vfx.smoke_plume(_enemy_view.transform * _enemy_view.random_hit_point())
+
+
+func _fort_banner() -> void:
+	var banner := Label.new()
+	banner.text = "%s HAS FALLEN!" % _port_name().to_upper()
+	banner.add_theme_font_size_override("font_size", 22)
+	banner.add_theme_color_override("font_color", Color("f5c542"))
+	banner.add_theme_constant_override("outline_size", 6)
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	banner.offset_left = -300
+	banner.offset_right = 300
+	banner.offset_top = 52
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner.modulate.a = 0.0
+	banner.pivot_offset = Vector2(300, 14)
+	banner.scale = Vector2(1.6, 1.6)
+	_ui_root.add_child(banner)
+	var tween := banner.create_tween().set_parallel()
+	tween.tween_property(banner, "modulate:a", 1.0, 0.5)
+	tween.tween_property(banner, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_interval(FORT_FALL_TIME - 0.9)
+	tween.chain().tween_property(banner, "modulate:a", 0.0, 0.4)
+
+
+## The port we're attacking, from the map node we're on.
+func _port_name() -> String:
+	var run: RunState = GameState.run
+	var here := int(run.map.get("current", -1))
+	if here < 0:
+		return "The fort"
+	return str(run.map["nodes"][here].get("name", "The fort"))
+
+
 func _show_victory(captured: bool) -> void:
 	var run: RunState = GameState.run
 	var gold := int(_enemy_data.get("gold_reward", 10))
@@ -904,10 +1023,16 @@ func _show_victory(captured: bool) -> void:
 	run.gold += gold
 	run.battles_won += 1
 	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
+	if enemy.is_static:
+		headline = "The guns of the %s fall silent and her colours come down." if captured else "The walls of the %s are breached. The white flag goes up."
 	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
 		gold, patched["repair"], patched["mend"], player.hands]
 	var morale := Morale.WIN + (Morale.CAPTURE if captured else 0)
-	if captured:
+	if enemy.is_static:
+		# The town is ours: what we take from it is chosen ashore. Word spreads.
+		Voyage.change_hunt(run, int(_enemy_data.get("raid_hunt", RAID_HUNT)))
+		morale += int(_enemy_data.get("raid_morale", RAID_MORALE))
+	if captured or enemy.is_static:  # a fort's walls fall, but her cells are still standing
 		text = _free_captives(text)
 		if enemy.captives > 0:
 			morale += Morale.FREED_CAPTIVES
@@ -916,6 +1041,10 @@ func _show_victory(captured: bool) -> void:
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
 	text += _morale_line(morale)
+	if enemy.is_static:
+		text += "\n%s is yours. The townsfolk wait to see what you'll do." % _port_name()
+		_show_result(text, "Go ashore", _go_ashore)
+		return
 	var survivors := 0
 	if not captured:
 		survivors = roundi(enemy.hands * SURVIVOR_SHARE * randf_range(0.7, 1.3))
@@ -924,6 +1053,13 @@ func _show_victory(captured: bool) -> void:
 		return
 	text += "\n%d of her crew are clinging to the wreckage. What's to be done with them?" % survivors
 	_offer_prisoners(text, survivors, "Leave them to the sea")
+
+
+func _go_ashore() -> void:
+	var run: RunState = GameState.run
+	run.port_taken = true
+	SaveSystem.save_run(run)
+	GameState.change_screen(GameState.Screen.SHOP)
 
 
 ## Someone got away. Nobody is paid and nothing is mended; the damage stays.
@@ -1084,6 +1220,7 @@ func _build_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(root)
+	_ui_root = root
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1166,6 +1303,9 @@ func _build_ui() -> void:
 	_debug_lash_button = _add_order_button(_boarding_row, _on_debug_lash_pressed, 0)
 	_debug_lash_button.text = "TEST: lash now (B)"
 	_debug_lash_button.add_theme_color_override("font_color", Color("ff9f43"))
+	_cheat_button = _add_order_button(_boarding_row, _on_cheat_pressed, 0)
+	_cheat_button.text = "TEST: god mode (T)"
+	_cheat_button.add_theme_color_override("font_color", Color("ff9f43"))
 
 	# Bottom: orders.
 	var bottom := HBoxContainer.new()
@@ -1410,6 +1550,8 @@ func _refresh_boarding_ui() -> void:
 	_fall_back_button.visible = b.state == "melee" and b.attacker == player
 	_debug_lash_button.visible = DEBUG_BOARDING and b.state != "lashed" and b.state != "melee"
 	_debug_lash_button.disabled = _over
+	_cheat_button.visible = DEBUG_CHEATS and b.state != "lashed" and b.state != "melee"  # T still works
+	_cheat_button.disabled = _over
 
 
 func _status_text(ship: BattleShip) -> String:

@@ -128,6 +128,42 @@
     ],
     "max_hands": 150,
     "flees_at": 0.0,
-    "boards": false
+    "boards": false,
+    "special": true
+  },
+  {
+    "id": "shore_fort",
+    "name": "Harbour fort",
+    "faction": "company",
+    "static": true,
+    "special": true,
+    "max_hull": 50,
+    "guns_per_side": 4,
+    "reload_time": 14,
+    "accuracy": 0.5,
+    "gold_reward": 40,
+    "min_sea": 99,
+    "hull_color": "8a8676",
+    "sail_color": "8a8676",
+    "flag_color": "b03a2e",
+    "max_sails": 0,
+    "evasion": 0.0,
+    "layout": "fort",
+    "crew": [
+      "gunner",
+      "carpenter",
+      "surgeon"
+    ],
+    "max_hands": 120,
+    "flees_at": 0.0,
+    "boards": false,
+    "plunder": {
+      "gold": 40,
+      "rum": 8,
+      "ammo": {
+        "heated_shot": 4,
+        "chain_shot": 4
+      }
+    }
   }
 ]

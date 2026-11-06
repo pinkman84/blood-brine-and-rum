@@ -68,6 +68,13 @@ func sail_hit(pos: Vector2) -> void:
 	shake(1.5)
 
 
+## A slow column of dark smoke with a few embers, for a burning fort.
+func smoke_plume(pos: Vector2) -> void:
+	_burst(pos, Color(0.12, 0.11, 0.1, 0.85), 8, 3.5, Vector2(0, -1), 20.0, 18.0, Vector2(6, -8), 26.0, _smoke_tex, false)
+	if randf() < 0.4:
+		_burst(pos, Color(1.0, 0.55, 0.15), 4, 0.8, Vector2(0, -1), 40.0, 30.0, Vector2(0, -10), 2.0, null, true)
+
+
 ## Steel and pistol flashes where boarders are fighting.
 func melee_clash(pos: Vector2) -> void:
 	_burst(pos, Color(1.0, 0.95, 0.7), 6, 0.25, Vector2(0, -1), 180.0, 40.0, Vector2.ZERO, 2.0, null, true)

@@ -40,6 +40,7 @@ var flees_at := 0.0  # hull share at which an enemy captain runs (0 = never)
 var boards := false  # an enemy captain who likes to grapple and board
 var ai: Dictionary = {}  # the enemy faction's fighting style (data/factions "ai")
 var captives := 0  # people chained below decks (slavers)
+var is_static := false  # a fort: never turns or runs
 var morale_factor := 1.0  # from Morale.factor(); enemies fight at 1.0 for now
 var helm_factor := 1.0  # scales evasion; 0 = nobody steering
 var armed := false  # fire as soon as loaded
@@ -84,6 +85,7 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.flees_at = float(data.get("flees_at", 0.0))
 	s.boards = bool(data.get("boards", false))
 	s.captives = int(data.get("captives", 0))
+	s.is_static = bool(data.get("static", false))
 	var faction := str(data.get("faction", ""))
 	if Data.has_item("factions", faction):
 		s.ai = Data.get_item("factions", faction).get("ai", {})

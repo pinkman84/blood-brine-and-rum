@@ -13,7 +13,10 @@ const STYLES := {
 	"battle": ["B", Color("c0392b"), "Enemy ship"],
 	"elite": ["!", Color("8e44ad"), "Sea exit: veteran captain"],
 	"event": ["?", Color("2980b9"), "Something on the horizon"],
-	"shop": ["$", Color("27ae60"), "Trading post"],
+	"shop": ["$", Color("27ae60"), "Settlement: trade or raid"],
+	"settlement": ["$", Color("27ae60"), "Settlement: trade or raid"],
+	"haven": ["H", Color("a93226"), "Pirate haven: shore leave, hire crew"],
+	"port": ["P", Color("d4ac0d"), "Port"],
 	"calm": ["~", Color("7f8c8d"), "Calm seas"],
 }
 const UNKNOWN_COLOR := Color("4a5a66")
@@ -32,7 +35,7 @@ func _ready() -> void:
 	theme = theme_
 	_run = GameState.run
 	if _run.map.is_empty():
-		_run.map = SeaMapGen.generate(_run.run_seed, _run.sea_number)
+		_run.map = SeaMapGen.generate(_run.run_seed, _run.sea_number, _run.sea_id)
 		SaveSystem.save_run(_run)
 
 	var title := Label.new()
@@ -143,7 +146,7 @@ func _sail_to(id: int) -> void:
 			GameState.change_screen(GameState.Screen.BATTLE)
 		"event":
 			GameState.change_screen(GameState.Screen.EVENT)
-		"shop":
+		"shop", "settlement", "haven", "port":
 			GameState.change_screen(GameState.Screen.SHOP)
 		_:
 			Morale.change(_run, CALM_MORALE)
@@ -184,7 +187,7 @@ func _reachable() -> Array:
 ## Fog of war: the next REVEAL steps, anything visited, and the exit are known.
 func _is_known(node: Dictionary) -> bool:
 	var layer := int(node["layer"])
-	return layer < _run.node_index + REVEAL or str(node["type"]) == "elite" \
+	return layer < _run.node_index + REVEAL or str(node["type"]) == "elite" or str(node["type"]) == "port" \
 		or _was_visited(int(node["id"]))
 
 
@@ -208,7 +211,11 @@ func _refresh_info() -> void:
 	if _hover >= 0:
 		var node: Dictionary = _run.map["nodes"][_hover]
 		var style: Array = STYLES.get(str(node["type"]), ["?", UNKNOWN_COLOR, "Unknown"])
-		text = (str(style[2]) if _is_known(node) else "Unknown waters") + "\n" + text
+		var label := str(style[2])
+		if node.has("owner"):
+			var kind := str(Data.get_item("factions", str(node["owner"])).get("port", {}).get("kind", "port"))
+			label = "%s, %s: trade, or attack for a richer prize" % [node.get("name", "Port"), kind]
+		text = (label if _is_known(node) else "Unknown waters") + "\n" + text
 	else:
 		text = "Choose your heading: click a glowing node.\n" + text
 	_info.text = text
