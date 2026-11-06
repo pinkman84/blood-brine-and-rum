@@ -5,7 +5,7 @@ extends Node
 ## into here (start a run, finish a node, end the run) and never load each
 ## other directly.
 
-enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER }
+enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART }
 
 const SCREEN_SCENES := {
 	Screen.MENU: "res://scenes/ui/menu.tscn",
@@ -14,6 +14,7 @@ const SCREEN_SCENES := {
 	Screen.EVENT: "res://scenes/ui/event.tscn",
 	Screen.SHOP: "res://scenes/ui/shop.tscn",
 	Screen.GAME_OVER: "res://scenes/ui/game_over.tscn",
+	Screen.SEA_CHART: "res://scenes/map/sea_chart.tscn",
 }
 
 const STARTING_SHIP := "sloop"
@@ -38,6 +39,7 @@ func screen_name(screen: Screen) -> String:
 
 func start_new_run() -> void:
 	run = RunState.new_run(Data.get_item("ships", STARTING_SHIP))
+	Voyage.enter_sea(run, Voyage.START_SEA)
 	SaveSystem.add_meta("voyages", 1)
 	SaveSystem.save_meta()
 	SaveSystem.save_run(run)
@@ -46,7 +48,12 @@ func start_new_run() -> void:
 
 func continue_run() -> void:
 	run = SaveSystem.load_run()
-	change_screen(Screen.SEA_MAP if run != null else Screen.MENU)
+	if run == null:
+		change_screen(Screen.MENU)
+	elif run.route.size() < run.sea_number:
+		change_screen(Screen.SEA_CHART)  # we quit while choosing the next sea
+	else:
+		change_screen(Screen.SEA_MAP)
 
 
 ## Call when the player finishes a node. Moves on, saves, and returns to the map.
@@ -68,6 +75,12 @@ func finish_node() -> void:
 		run.map = {}  # the next sea's map is drawn when we first see it
 		if run.sea_number > RunState.SEAS_PER_RUN:
 			end_run(true)
+			return
+		if run.sea_number == RunState.SEAS_PER_RUN:
+			Voyage.enter_sea(run, Voyage.FINAL_SEA)  # the last leg is always the Company's home waters
+		else:
+			SaveSystem.save_run(run)
+			change_screen(Screen.SEA_CHART)  # choose the next sea
 			return
 	SaveSystem.save_run(run)
 	change_screen(Screen.SEA_MAP)

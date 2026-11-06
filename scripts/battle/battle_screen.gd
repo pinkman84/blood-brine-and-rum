@@ -112,6 +112,7 @@ var _log_label: Label
 var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
 var _start_hands := 0
+var _intro_note := ""  # shown once the battle screen is built
 
 
 func _ready() -> void:
@@ -138,6 +139,8 @@ func _ready() -> void:
 	_build_ui()
 	_update_stations()
 	_refresh_ui()
+	if _intro_note != "":
+		_log(_intro_note)
 
 
 func _exit_tree() -> void:
@@ -391,27 +394,57 @@ func _apply_stations(ship: BattleShip, view: ShipView, crew: Array) -> void:
 
 # --- Combat ---------------------------------------------------------------
 
+## Chooses the enemy: a Company hunter if the hunt has found us, otherwise a
+## ship from this sea's mix of factions. Then scales her to how far we've come,
+## and makes her a veteran if she guards the sea's exit.
 func _pick_enemy(sea: int) -> Dictionary:
 	var all: Array = Data.get_all("enemies")
 	var run: RunState = GameState.run
 	var elite := run.elite_pending
 	run.elite_pending = false
-	# The sea's exit fight may draw from one sea ahead.
-	var reach := sea + (1 if elite else 0)
-	var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= reach)
-	if options.is_empty():
-		options = all
-	var picked: Dictionary = options.pick_random()
-	if not elite:
-		return picked
-	# A veteran captain guarding the way out: tougher ship, richer prize.
+	var hunter := run.hunter_pending or (not elite and randf() < Voyage.hunter_chance(run))
+	run.hunter_pending = false
+	var picked: Dictionary = {}
+	if hunter:
+		var hunters := all.filter(func(e: Dictionary) -> bool: return bool(e.get("hunter", false)))
+		if not hunters.is_empty():
+			picked = hunters.pick_random()
+			_intro_note = "A Company hunter has run us down!"
+	if picked.is_empty():
+		# The sea's exit fight may draw from one sea ahead.
+		var reach := sea + (1 if elite else 0)
+		var options := all.filter(func(e: Dictionary) -> bool: return int(e.get("min_sea", 1)) <= reach and not bool(e.get("hunter", false)))
+		if options.is_empty():
+			options = all
+		picked = _weighted_by_sea(options, run)
 	var boosted := picked.duplicate(true)
-	boosted["name"] = "Veteran " + str(picked.get("name", "ship")).to_lower()
-	boosted["max_hull"] = roundi(int(picked.get("max_hull", 20)) * ELITE_BOOST)
-	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * ELITE_BOOST)
-	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + 0.05
-	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * ELITE_GOLD)
+	var scale := Voyage.scale(run)
+	boosted["max_hull"] = roundi(int(picked.get("max_hull", 20)) * scale)
+	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * scale)
+	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + Voyage.SEA_ACCURACY * (sea - 1)
+	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * (1.0 + Voyage.SEA_GOLD * (sea - 1)))
+	if elite:
+		# A veteran captain guarding the way out: tougher ship, richer prize.
+		boosted["name"] = "Veteran " + str(picked.get("name", "ship")).to_lower()
+		boosted["max_hull"] = roundi(int(boosted["max_hull"]) * ELITE_BOOST)
+		boosted["max_hands"] = roundi(int(boosted["max_hands"]) * ELITE_BOOST)
+		boosted["accuracy"] = float(boosted["accuracy"]) + 0.05
+		boosted["gold_reward"] = roundi(int(boosted["gold_reward"]) * ELITE_GOLD)
 	return boosted
+
+
+## Picks from the candidates by this sea's faction weights (data/seas "factions").
+func _weighted_by_sea(options: Array, run: RunState) -> Dictionary:
+	var weights: Dictionary = Voyage.sea(run).get("factions", {})
+	var total := 0.0
+	for e: Dictionary in options:
+		total += float(weights.get(e.get("faction", ""), 0.5))
+	var roll := randf() * total
+	for e: Dictionary in options:
+		roll -= float(weights.get(e.get("faction", ""), 0.5))
+		if roll <= 0.0:
+			return e
+	return options.back()
 
 
 # --- Coming about -----------------------------------------------------------
@@ -919,6 +952,8 @@ func _morale_line(result: int) -> String:
 ## patch the hull, the hands and bosuns mend sails, and the wounded recover.
 func _write_back(won: bool) -> Dictionary:
 	var run: RunState = GameState.run
+	if won and str(_enemy_data.get("faction", "")) == "company":
+		Voyage.change_hunt(run, Voyage.HUNT_PER_COMPANY_SHIP)  # the Company notices its losses
 	var survivors := player_crew.filter(func(c: BattleCrew) -> bool: return c.alive)
 	var repair := 0
 	var mend := 0

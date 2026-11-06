@@ -101,5 +101,33 @@
     "flees_at": 0.4,
     "boards": false,
     "captives": 20
+  },
+  {
+    "id": "company_frigate",
+    "name": "Company hunter frigate",
+    "faction": "company",
+    "hunter": true,
+    "max_hull": 40,
+    "guns_per_side": 5,
+    "reload_time": 11,
+    "accuracy": 0.55,
+    "gold_reward": 35,
+    "min_sea": 1,
+    "hull_color": "4a3b2c",
+    "sail_color": "f5f2ea",
+    "flag_color": "b03a2e",
+    "max_sails": 22,
+    "evasion": 0.08,
+    "layout": "brigantine",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "gunner",
+      "carpenter",
+      "bosun"
+    ],
+    "max_hands": 150,
+    "flees_at": 0.0,
+    "boards": false
   }
 ]
