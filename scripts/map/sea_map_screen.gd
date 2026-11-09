@@ -18,6 +18,8 @@ const STYLES := {
 	"haven": ["H", Color("a93226"), "Pirate haven: shore leave, hire crew"],
 	"port": ["P", Color("d4ac0d"), "Port"],
 	"calm": ["~", Color("7f8c8d"), "Calm seas"],
+	"storm": ["S", Color("34495e"), "Storm clouds"],
+	"treasure": ["X", Color("e67e22"), "Treasure, if the old chart is true"],
 }
 const UNKNOWN_COLOR := Color("4a5a66")
 const CALM_MORALE := 1
@@ -144,7 +146,7 @@ func _sail_to(id: int) -> void:
 		"elite":
 			_run.elite_pending = true
 			GameState.change_screen(GameState.Screen.BATTLE)
-		"event":
+		"event", "storm", "treasure":
 			GameState.change_screen(GameState.Screen.EVENT)
 		"shop", "settlement", "haven", "port":
 			GameState.change_screen(GameState.Screen.SHOP)

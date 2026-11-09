@@ -53,6 +53,8 @@ func continue_run() -> void:
 		change_screen(Screen.MENU)
 	elif run.route.size() < run.sea_number:
 		change_screen(Screen.SEA_CHART)  # we quit while choosing the next sea
+	elif run.forced_event != "":
+		change_screen(Screen.EVENT)  # quitting doesn't get you out of a mutiny
 	else:
 		change_screen(Screen.SEA_MAP)
 
@@ -84,6 +86,19 @@ func finish_node() -> void:
 			SaveSystem.save_run(run)
 			change_screen(Screen.SEA_CHART)  # choose the next sea
 			return
+	if run.morale < Morale.MUTINY and run.days - run.last_mutiny >= Morale.MUTINY_GAP:
+		# The crew have had enough.
+		run.last_mutiny = run.days
+		run.forced_event = "mutiny"
+		SaveSystem.save_run(run)
+		change_screen(Screen.EVENT)
+		return
+	SaveSystem.save_run(run)
+	change_screen(Screen.SEA_MAP)
+
+
+## Back to the map after something that happened between nodes (a mutiny).
+func resume_map() -> void:
 	SaveSystem.save_run(run)
 	change_screen(Screen.SEA_MAP)
 

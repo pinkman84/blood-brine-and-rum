@@ -165,5 +165,147 @@
         "chain_shot": 4
       }
     }
+  },
+  {
+    "id": "commodore_crane",
+    "name": "Lord Ashby",
+    "captain": "Commodore Josiah Crane",
+    "faction": "company",
+    "elite": true,
+    "special": true,
+    "max_hull": 34,
+    "guns_per_side": 5,
+    "reload_time": 11,
+    "accuracy": 0.55,
+    "gold_reward": 45,
+    "min_sea": 1,
+    "hull_color": "4a3b2c",
+    "sail_color": "f5f2ea",
+    "flag_color": "b03a2e",
+    "max_sails": 22,
+    "evasion": 0.06,
+    "layout": "brigantine",
+    "crew": [
+      "gunner",
+      "gunner",
+      "helmsman",
+      "carpenter",
+      "surgeon"
+    ],
+    "max_hands": 140,
+    "flees_at": 0.0,
+    "boards": false,
+    "reward": {
+      "ammo": {
+        "heated_shot": 6,
+        "chain_shot": 6
+      },
+      "hunt": -10
+    },
+    "intro": "Commodore Crane's Lord Ashby bars the way out of these waters. The Company wants you dead."
+  },
+  {
+    "id": "captain_hale",
+    "name": "Vigilant",
+    "captain": "Captain Edmund Hale",
+    "faction": "navy",
+    "elite": true,
+    "special": true,
+    "max_hull": 32,
+    "guns_per_side": 4,
+    "reload_time": 10,
+    "accuracy": 0.6,
+    "gold_reward": 35,
+    "min_sea": 2,
+    "hull_color": "2c3e50",
+    "sail_color": "ffffff",
+    "flag_color": "2e4a8a",
+    "max_sails": 22,
+    "evasion": 0.15,
+    "layout": "sloop",
+    "crew": [
+      "helmsman",
+      "gunner",
+      "gunner",
+      "carpenter",
+      "bosun",
+      "boarding_master"
+    ],
+    "max_hands": 120,
+    "flees_at": 0.0,
+    "boards": true,
+    "reward": {
+      "join": "gunner"
+    },
+    "intro": "Captain Hale of HMS Vigilant, the best gunnery captain in the Navy, has come for you."
+  },
+  {
+    "id": "mad_meg",
+    "name": "Widow's Revenge",
+    "captain": "Mad Meg Blackmoor",
+    "faction": "rivals",
+    "elite": true,
+    "special": true,
+    "max_hull": 28,
+    "guns_per_side": 4,
+    "reload_time": 11,
+    "accuracy": 0.5,
+    "gold_reward": 35,
+    "min_sea": 1,
+    "hull_color": "2b211a",
+    "sail_color": "6e2c2c",
+    "flag_color": "1a1a1a",
+    "max_sails": 20,
+    "evasion": 0.18,
+    "layout": "sloop",
+    "crew": [
+      "boarding_master",
+      "boarding_master",
+      "helmsman",
+      "gunner",
+      "surgeon"
+    ],
+    "max_hands": 140,
+    "flees_at": 0.0,
+    "boards": true,
+    "reward": {
+      "join": "boarding_master",
+      "rum": 6
+    },
+    "intro": "Mad Meg Blackmoor's Widow's Revenge comes about to meet you, her deck packed with boarders."
+  },
+  {
+    "id": "iron_gallows",
+    "name": "Iron Gallows",
+    "captain": "Silas Venn",
+    "faction": "slavers",
+    "elite": true,
+    "special": true,
+    "max_hull": 32,
+    "guns_per_side": 4,
+    "reload_time": 12,
+    "accuracy": 0.5,
+    "gold_reward": 40,
+    "min_sea": 1,
+    "hull_color": "2a2420",
+    "sail_color": "a89f88",
+    "flag_color": "5b1a1a",
+    "max_sails": 18,
+    "evasion": 0.08,
+    "layout": "brigantine",
+    "crew": [
+      "gunner",
+      "helmsman",
+      "carpenter",
+      "boarding_master"
+    ],
+    "max_hands": 100,
+    "flees_at": 0.2,
+    "boards": false,
+    "captives": 30,
+    "reward": {
+      "gold": 20
+    },
+    "intro": "Silas Venn's Iron Gallows, the most feared slaver on the seas, blocks the passage. Thirty souls are chained below."
   }
 ]

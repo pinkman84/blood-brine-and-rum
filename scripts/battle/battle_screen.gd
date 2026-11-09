@@ -435,6 +435,10 @@ func _pick_enemy(sea: int) -> Dictionary:
 		if not hunters.is_empty():
 			picked = hunters.pick_random()
 			_intro_note = "A Company hunter has run us down!"
+	var captain := false
+	if picked.is_empty() and elite:
+		picked = _pick_captain(all, run, sea + 1)
+		captain = not picked.is_empty()
 	if picked.is_empty():
 		# The sea's exit fight may draw from one sea ahead.
 		var reach := sea + (1 if elite else 0)
@@ -448,14 +452,29 @@ func _pick_enemy(sea: int) -> Dictionary:
 	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * scale)
 	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + Voyage.SEA_ACCURACY * (sea - 1)
 	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * (1.0 + Voyage.SEA_GOLD * (sea - 1)))
-	if elite:
-		# A veteran captain guarding the way out: tougher ship, richer prize.
+	if elite and not captain:
+		# No named captain left for these waters: a veteran guards the way out.
 		boosted["name"] = "Veteran " + str(picked.get("name", "ship")).to_lower()
 		boosted["max_hull"] = roundi(int(boosted["max_hull"]) * ELITE_BOOST)
 		boosted["max_hands"] = roundi(int(boosted["max_hands"]) * ELITE_BOOST)
 		boosted["accuracy"] = float(boosted["accuracy"]) + 0.05
 		boosted["gold_reward"] = roundi(int(boosted["gold_reward"]) * ELITE_GOLD)
 	return boosted
+
+
+## A named elite captain for the sea's exit (enemies with "elite"), one we
+## haven't met this run, weighted by this sea's factions. Empty if none left.
+func _pick_captain(all: Array, run: RunState, reach: int) -> Dictionary:
+	var options: Array = []
+	for e: Dictionary in all:
+		if bool(e.get("elite", false)) and int(e.get("min_sea", 1)) <= reach and not run.met_captains.has(e["id"]):
+			options.append(e)
+	if options.is_empty():
+		return {}
+	var picked := _weighted_by_sea(options, run)
+	run.met_captains.append(picked["id"])
+	_intro_note = str(picked.get("intro", "%s bars the way out of these waters!" % picked.get("captain", "A famous captain")))
+	return picked
 
 
 ## The harbour fort, dressed for whoever owns the port (factions "port").
@@ -1028,6 +1047,11 @@ func _show_victory(captured: bool) -> void:
 	var text := (headline % enemy.display_name) + "\n+%d gold. Hull patched %d, sails mended %d. Hands left: %d." % [
 		gold, patched["repair"], patched["mend"], player.hands]
 	var morale := Morale.WIN + (Morale.CAPTURE if captured else 0)
+	var reward: Dictionary = _enemy_data.get("reward", {})
+	if not reward.is_empty():
+		# An elite captain's cabin: her strongbox, her charts, maybe a man of hers.
+		text += "\n%s is beaten! From the captain's cabin: %s." % [_enemy_data.get("captain", "Her captain"), ", ".join(Events.apply(run, reward))]
+		morale += Morale.CAPTURE
 	if enemy.is_static:
 		# The town is ours: what we take from it is chosen ashore. Word spreads.
 		Voyage.change_hunt(run, int(_enemy_data.get("raid_hunt", RAID_HUNT)))
@@ -1341,8 +1365,10 @@ func _build_ui() -> void:
 	_log_label = Label.new()
 	_log_label.add_theme_font_size_override("font_size", 12)
 	_log_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_log_label.offset_top = -52
+	_log_label.offset_top = -84  # room for two lines of a long message, growing upwards
 	_log_label.offset_bottom = -36
+	_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_log_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_log_label.offset_left = -200
 	_log_label.offset_right = 200
 	_log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

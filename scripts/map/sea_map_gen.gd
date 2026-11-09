@@ -16,7 +16,7 @@ extends RefCounted
 const LAYERS := 7
 const MIN_BATTLES := 4
 const PORT_LAYER := 3
-const TYPE_WEIGHTS := {"battle": 0.55, "event": 0.3, "calm": 0.15}
+const TYPE_WEIGHTS := {"battle": 0.52, "event": 0.25, "calm": 0.1, "storm": 0.08, "treasure": 0.05}
 const LEFT := 70.0
 const RIGHT := 590.0
 const TOP := 70.0
@@ -26,9 +26,12 @@ const BOTTOM := 230.0
 static func generate(run_seed: int, sea: int, sea_id := "") -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([run_seed, sea])
+	var sea_data: Dictionary = Data.get_item("seas", sea_id) if Data.has_item("seas", sea_id) else {}
+	var weights := TYPE_WEIGHTS.duplicate()
+	weights["storm"] = float(weights["storm"]) * float(sea_data.get("storms", 1.0))  # the Cape lives up to its name
 	var map: Dictionary = {}
 	for attempt in 150:
-		map = _build(rng)
+		map = _build(rng, weights)
 		if min_battles(map) >= MIN_BATTLES:
 			break
 	if min_battles(map) < MIN_BATTLES:
@@ -58,7 +61,7 @@ static func _name_port(map: Dictionary, rng: RandomNumberGenerator, sea_id: Stri
 			node["name"] = str(names[rng.randi_range(0, names.size() - 1)])
 
 
-static func _build(rng: RandomNumberGenerator) -> Dictionary:
+static func _build(rng: RandomNumberGenerator, weights: Dictionary) -> Dictionary:
 	var nodes: Array = []
 	var layers: Array = []  # layer -> array of node ids
 	for layer in LAYERS:
@@ -67,7 +70,7 @@ static func _build(rng: RandomNumberGenerator) -> Dictionary:
 		for k in count:
 			var x := lerpf(LEFT, RIGHT, float(layer) / (LAYERS - 1))
 			var y := lerpf(TOP, BOTTOM, (k + 0.5) / count) + rng.randf_range(-8.0, 8.0)
-			var type := "elite" if layer == LAYERS - 1 else ("port" if layer == PORT_LAYER else _pick_type(rng, layer))
+			var type := "elite" if layer == LAYERS - 1 else ("port" if layer == PORT_LAYER else _pick_type(rng, weights))
 			nodes.append({"id": nodes.size(), "layer": layer, "type": type, "pos": [roundf(x), roundf(y)], "links": []})
 			ids.append(nodes.size() - 1)
 		layers.append(ids)
@@ -97,13 +100,13 @@ static func _link(nodes: Array, from_id: int, to_id: int, reached: Dictionary) -
 	reached[to_id] = true
 
 
-static func _pick_type(rng: RandomNumberGenerator, _layer: int) -> String:
+static func _pick_type(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 	var total := 0.0
-	for type: String in TYPE_WEIGHTS:
-		total += float(TYPE_WEIGHTS[type])
+	for type: String in weights:
+		total += float(weights[type])
 	var roll := rng.randf() * total
-	for type: String in TYPE_WEIGHTS:
-		roll -= float(TYPE_WEIGHTS[type])
+	for type: String in weights:
+		roll -= float(weights[type])
 		if roll <= 0.0:
 			return type
 	return "battle"

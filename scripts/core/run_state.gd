@@ -35,6 +35,9 @@ var forced_enemy := ""  # an event chose who we fight next (an enemy id)
 var seen_events: Array = []  # event ids already met this run (no repeats)
 var port_owner := ""  # set when attacking a port, so its fort fights for that faction
 var port_taken := false  # we beat this sea's port fort and are ashore in the town
+var forced_event := ""  # an event that happens before we sail on (a mutiny)
+var last_mutiny := -99  # the day the crew last rose; they don't rise again for a while
+var met_captains: Array = []  # elite captains already fought this run
 var battles_won: int = 0
 
 
@@ -94,6 +97,9 @@ func to_dict() -> Dictionary:
 		"seen_events": seen_events,
 		"port_owner": port_owner,
 		"port_taken": port_taken,
+		"forced_event": forced_event,
+		"last_mutiny": last_mutiny,
+		"met_captains": met_captains,
 		"battles_won": battles_won,
 	}
 
@@ -138,6 +144,9 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.seen_events = data.get("seen_events", [])
 	run.port_owner = str(data.get("port_owner", ""))
 	run.port_taken = bool(data.get("port_taken", false))
+	run.forced_event = str(data.get("forced_event", ""))
+	run.last_mutiny = int(data.get("last_mutiny", -99))
+	run.met_captains = data.get("met_captains", [])
 	if run.sea_id == "":  # saves from before the sea chart
 		run.sea_id = Voyage.START_SEA
 		run.route = [Voyage.START_SEA]

@@ -26,7 +26,8 @@
       "navy": 3,
       "company": 1,
       "slavers": 1
-    }
+    },
+    "storms": 1.0
   },
   {
     "id": "atlantic",
@@ -51,7 +52,8 @@
       "navy": 4,
       "company": 2,
       "rivals": 1
-    }
+    },
+    "storms": 1.5
   },
   {
     "id": "west_africa",
@@ -67,7 +69,7 @@
     },
     "settlements": [
       "Cape Coast",
-      "Gor\u00e9e",
+      "Gorée",
       "Ouidah"
     ],
     "havens": [
@@ -77,7 +79,8 @@
       "slavers": 4,
       "company": 2,
       "navy": 1
-    }
+    },
+    "storms": 0.7
   },
   {
     "id": "cape_of_storms",
@@ -99,7 +102,8 @@
     "port_owners": {
       "company": 4,
       "navy": 1
-    }
+    },
+    "storms": 2.5
   },
   {
     "id": "indian_ocean",
@@ -119,12 +123,13 @@
     ],
     "havens": [
       "Libertalia",
-      "\u00cele Sainte-Marie"
+      "Île Sainte-Marie"
     ],
     "port_owners": {
       "company": 3,
       "brotherhood": 3
-    }
+    },
+    "storms": 1.5
   },
   {
     "id": "spice_islands",
@@ -148,7 +153,8 @@
       "company": 4,
       "brotherhood": 1,
       "rivals": 1
-    }
+    },
+    "storms": 0.8
   },
   {
     "id": "south_china_sea",
@@ -170,6 +176,7 @@
     ],
     "port_owners": {
       "company": 5
-    }
+    },
+    "storms": 1.5
   }
 ]

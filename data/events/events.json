@@ -760,5 +760,780 @@
       "atlantic",
       "west_africa"
     ]
+  },
+  {
+    "id": "mutiny",
+    "title": "Mutiny!",
+    "text": "The hands gather at the mainmast with cutlasses drawn. Their spokesman says it plainly: things change, or you go over the side.",
+    "pool": "mutiny",
+    "choices": [
+      {
+        "text": "Pay them off with double shares (30 gold)",
+        "requires": {
+          "gold": 30
+        },
+        "outcomes": [
+          {
+            "text": "Coin speaks louder than grievance. The cutlasses go back in their belts.",
+            "effects": {
+              "gold": -30,
+              "morale": 25
+            }
+          }
+        ]
+      },
+      {
+        "text": "Break out the rum (6 rum)",
+        "requires": {
+          "rum": 6
+        },
+        "outcomes": [
+          {
+            "text": "A cask is broached on deck. By nightfall they're singing, not plotting.",
+            "effects": {
+              "rum": -6,
+              "morale": 15
+            }
+          }
+        ]
+      },
+      {
+        "text": "Have the bosun talk them round",
+        "requires": {
+          "role": "bosun"
+        },
+        "outcomes": [
+          {
+            "chance": 3,
+            "text": "The bosun knows every man by name. One by one, they back down.",
+            "effects": {
+              "morale": 20
+            }
+          },
+          {
+            "chance": 1,
+            "text": "They hear him out, then knock him flat. But the fire's gone out of them.",
+            "effects": {
+              "wound": 40,
+              "morale": 10
+            }
+          }
+        ]
+      },
+      {
+        "text": "Hang the ringleaders",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "Three men swing from the yardarm. The rest go quietly back to work.",
+            "effects": {
+              "hands": -6,
+              "morale": 12
+            }
+          },
+          {
+            "chance": 1,
+            "text": "They fight for it. When it's over the deck is red and the survivors are cowed.",
+            "effects": {
+              "hands": -15,
+              "wound": 50,
+              "morale": 8
+            }
+          }
+        ]
+      },
+      {
+        "text": "Promise them a fat prize at the next sail",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "They grumble, but they'll give you one more chance.",
+            "effects": {
+              "morale": 10
+            }
+          },
+          {
+            "chance": 1,
+            "text": "They've heard it before. You're put over the side in the jolly boat with a pistol and one shot. Your voyage ends here.",
+            "effects": {
+              "end_run": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "black_squall",
+    "title": "A black squall",
+    "text": "A wall of cloud races across the water towards you, rain hissing on the waves ahead of it.",
+    "pool": "storm",
+    "choices": [
+      {
+        "text": "Ride it out under bare poles",
+        "outcomes": [
+          {
+            "text": "It batters you for an hour, then is gone. Torn canvas and sprung planks.",
+            "effects": {
+              "sails": -4,
+              "hull": -2
+            }
+          }
+        ]
+      },
+      {
+        "text": "Have the bosun shorten sail in time",
+        "requires": {
+          "role": "bosun"
+        },
+        "outcomes": [
+          {
+            "text": "Reefed and ready before it hits. You barely feel it.",
+            "effects": {
+              "sails": -1,
+              "morale": 3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Run before it",
+        "outcomes": [
+          {
+            "text": "You fly ahead of the squall and lose it, but far off your course.",
+            "effects": {
+              "days": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "hurricane",
+    "title": "Hurricane",
+    "text": "The glass has fallen like a stone. The sky goes green, then black, and the sea rises in grey mountains.",
+    "pool": "storm",
+    "min_sea": 2,
+    "choices": [
+      {
+        "text": "Heave to and pray",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "A night of horror. The ship survives. Not all the crew do.",
+            "effects": {
+              "hull": -6,
+              "sails": -6,
+              "hands": -4
+            }
+          },
+          {
+            "chance": 1,
+            "text": "A wave sweeps the deck clean.",
+            "effects": {
+              "hull": -8,
+              "sails": -6,
+              "hands": -8,
+              "wound": 30
+            }
+          }
+        ]
+      },
+      {
+        "text": "Run for shelter behind the nearest island",
+        "outcomes": [
+          {
+            "text": "You find a lee and wait out the storm at anchor, eating into your rum.",
+            "effects": {
+              "days": 2,
+              "hull": -1
+            }
+          }
+        ]
+      },
+      {
+        "text": "Lash everything down and let the carpenter work",
+        "requires": {
+          "role": "carpenter"
+        },
+        "outcomes": [
+          {
+            "text": "The carpenter is everywhere at once, shoring up the hull as it groans. You come through.",
+            "effects": {
+              "hull": -2,
+              "sails": -4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "waterspouts",
+    "title": "Waterspouts",
+    "text": "Three twisting columns of water dance across the sea between you and your heading.",
+    "pool": "storm",
+    "choices": [
+      {
+        "text": "Thread the gap between them",
+        "requires": {
+          "role": "helmsman"
+        },
+        "outcomes": [
+          {
+            "text": "Your helmsman puts her through like a needle. The crew cheer themselves hoarse.",
+            "effects": {
+              "morale": 6
+            }
+          }
+        ]
+      },
+      {
+        "text": "Fire a broadside into the nearest one",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "An old sailor's trick, and it works: the spout collapses in a great shower.",
+            "effects": {
+              "morale": 8
+            }
+          },
+          {
+            "chance": 1,
+            "text": "It doesn't work. The spout brushes your bow and tears away rigging.",
+            "effects": {
+              "sails": -5,
+              "hull": -3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Go the long way round",
+        "outcomes": [
+          {
+            "text": "Safe, and slow.",
+            "effects": {
+              "days": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "buried_chest",
+    "title": "X marks the cay",
+    "text": "A spit of sand and three palm trees, just as the old chart showed. Somewhere under them is a chest.",
+    "pool": "treasure",
+    "choices": [
+      {
+        "text": "Dig for it",
+        "outcomes": [
+          {
+            "chance": 3,
+            "text": "Iron-bound and heavy with coin. The crew whoop like boys.",
+            "effects": {
+              "gold": 45,
+              "morale": 5
+            }
+          },
+          {
+            "chance": 1,
+            "text": "A trap: the pit collapses as you lift the chest. You save some of it.",
+            "effects": {
+              "gold": 15,
+              "wound": 40
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Rivals were watching the cay. Their sloop rounds the point as you dig.",
+            "effects": {
+              "gold": 10,
+              "battle": "rival_sloop"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Leave it. It's too easy",
+        "outcomes": [
+          {
+            "text": "You'll always wonder.",
+            "effects": {
+              "morale": -3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sunken_galleon",
+    "title": "A wreck in the shallows",
+    "text": "The ribs of an old treasure galleon lie in clear water, two fathoms down.",
+    "pool": "treasure",
+    "choices": [
+      {
+        "text": "Send divers down for the gold",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "They come up with fistfuls of silver pieces of eight.",
+            "effects": {
+              "gold": 50,
+              "hands": -2
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Sharks. You pull back what's left of the divers, and little else.",
+            "effects": {
+              "gold": 5,
+              "hands": -5,
+              "morale": -5
+            }
+          }
+        ]
+      },
+      {
+        "text": "Salvage her powder and shot",
+        "requires": {
+          "role": "carpenter"
+        },
+        "outcomes": [
+          {
+            "text": "The carpenter rigs a hoist. Her magazine is dry, and full.",
+            "effects": {
+              "ammo": {
+                "heated_shot": 6,
+                "chain_shot": 6,
+                "grape_shot": 6
+              }
+            }
+          }
+        ]
+      },
+      {
+        "text": "Sail on",
+        "outcomes": [
+          {
+            "text": "Let the dead keep their gold.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pirate_hoard",
+    "title": "An old pirate's hoard",
+    "text": "A cave on a nameless island, the walls scratched with tallies and the floor heaped with the plunder of a long-dead captain.",
+    "pool": "treasure",
+    "choices": [
+      {
+        "text": "Take it all for the ship's chest",
+        "outcomes": [
+          {
+            "text": "A fortune in coin and plate. The hands mutter about their share.",
+            "effects": {
+              "gold": 60,
+              "morale": -5
+            }
+          }
+        ]
+      },
+      {
+        "text": "Share it out among the crew",
+        "outcomes": [
+          {
+            "text": "Every man gets a fistful. You'll not find a happier crew on the seas.",
+            "effects": {
+              "gold": 20,
+              "morale": 20
+            }
+          }
+        ]
+      },
+      {
+        "text": "Leave it. The place is cursed",
+        "outcomes": [
+          {
+            "chance": 1,
+            "text": "Nothing happens, but the crew sleep easier.",
+            "effects": {
+              "morale": 2
+            }
+          },
+          {
+            "chance": 1,
+            "text": "The crew think you a coward.",
+            "effects": {
+              "morale": -6
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ghost_lights",
+    "title": "Lights in the fog",
+    "text": "Lanterns drift in the fog ahead, keeping pace with you. No ship answers your hail.",
+    "choices": [
+      {
+        "text": "Follow them",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "They lead you to a drifting, empty brig. Her strongbox is still aboard.",
+            "effects": {
+              "gold": 25
+            }
+          },
+          {
+            "chance": 1,
+            "text": "The lights go out. When the fog lifts you're on a reef.",
+            "effects": {
+              "hull": -6,
+              "morale": -5
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Wreckers! A sloop comes out of the fog with her guns run out.",
+            "effects": {
+              "battle": "rival_sloop"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Steer clear",
+        "outcomes": [
+          {
+            "text": "The crew are glad of it.",
+            "effects": {
+              "morale": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "company_dispatch",
+    "title": "A Company packet",
+    "text": "A fast little packet boat flying Company colours, carrying dispatches to the fleet.",
+    "seas": [
+      "atlantic",
+      "indian_ocean",
+      "cape_of_storms",
+      "spice_islands",
+      "south_china_sea"
+    ],
+    "choices": [
+      {
+        "text": "Take her and read the dispatches",
+        "requires": {
+          "hands": 40
+        },
+        "outcomes": [
+          {
+            "text": "Patrol routes, convoy times and the names of the captains hunting you. Very useful.",
+            "effects": {
+              "hunt": -15,
+              "morale": 3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Sink her before she reports you",
+        "outcomes": [
+          {
+            "text": "She goes down with her letters. Somebody will miss her.",
+            "effects": {
+              "hunt": 5,
+              "gold": 10
+            }
+          }
+        ]
+      },
+      {
+        "text": "Let her go",
+        "outcomes": [
+          {
+            "text": "She'll report your position.",
+            "effects": {
+              "hunt": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "marooned_crew",
+    "title": "Marooned",
+    "text": "A dozen ragged men wave from a sandbar. Their captain marooned them for talking of mutiny.",
+    "choices": [
+      {
+        "text": "Take them all aboard",
+        "outcomes": [
+          {
+            "chance": 3,
+            "text": "Grateful and hard-working. For now.",
+            "effects": {
+              "hands": 12,
+              "morale": -2
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Grateful, but they bring their grievances with them.",
+            "effects": {
+              "hands": 12,
+              "morale": -8
+            }
+          }
+        ]
+      },
+      {
+        "text": "Take only the one who claims he was a sailing master",
+        "outcomes": [
+          {
+            "text": "He knows his business.",
+            "effects": {
+              "join": "helmsman"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Leave them their fate",
+        "outcomes": [
+          {
+            "text": "Their curses follow you over the water.",
+            "effects": {
+              "morale": -3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "card_sharp",
+    "title": "A card sharp",
+    "text": "There's been a run of luck at the gaming table on the gun deck, and it's all been one man's.",
+    "choices": [
+      {
+        "text": "Search him",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "Marked cards up both sleeves. The crew get their money back and he gets a ducking.",
+            "effects": {
+              "morale": 6
+            }
+          },
+          {
+            "chance": 1,
+            "text": "Nothing on him. He was just lucky, and now he's sulking.",
+            "effects": {
+              "morale": -3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Clap him in irons",
+        "outcomes": [
+          {
+            "text": "Justice is rough but quick. He'll fetch a ransom with the others.",
+            "effects": {
+              "prisoners": 1,
+              "hands": -1,
+              "morale": 3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Make him the purser",
+        "outcomes": [
+          {
+            "text": "If he's that good with numbers... the crew think it's a fine joke.",
+            "effects": {
+              "gold": 10,
+              "morale": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "native_traders",
+    "title": "Traders in canoes",
+    "text": "Canoes put out from the shore loaded with fruit, fresh water and timber, and the paddlers wave you in.",
+    "seas": [
+      "west_africa",
+      "spice_islands",
+      "indian_ocean"
+    ],
+    "choices": [
+      {
+        "text": "Trade rum for timber and fresh food (4 rum)",
+        "requires": {
+          "rum": 4
+        },
+        "outcomes": [
+          {
+            "text": "Good timber for the carpenter and fresh fruit for the hands.",
+            "effects": {
+              "rum": -4,
+              "hull": 5,
+              "morale": 6
+            }
+          }
+        ]
+      },
+      {
+        "text": "Trade shot for gold dust (5 chain shot)",
+        "requires": {
+          "ammo": {
+            "chain_shot": 5
+          }
+        },
+        "outcomes": [
+          {
+            "text": "They value iron more than gold.",
+            "effects": {
+              "ammo": {
+                "chain_shot": -5
+              },
+              "gold": 30
+            }
+          }
+        ]
+      },
+      {
+        "text": "Wave them off",
+        "outcomes": [
+          {
+            "text": "They paddle back to shore.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "becalmed",
+    "title": "Becalmed",
+    "text": "Not a breath of wind for two days. The sails hang limp and the pitch bubbles in the deck seams.",
+    "choices": [
+      {
+        "text": "Wait for the wind",
+        "outcomes": [
+          {
+            "text": "It comes at last, but the heat has worn on everyone.",
+            "effects": {
+              "days": 2,
+              "morale": -4
+            }
+          }
+        ]
+      },
+      {
+        "text": "Put the boats out and tow her",
+        "requires": {
+          "hands": 50
+        },
+        "outcomes": [
+          {
+            "text": "Back-breaking work, but you find the wind by nightfall.",
+            "effects": {
+              "days": 1,
+              "morale": -2
+            }
+          }
+        ]
+      },
+      {
+        "text": "Splice the mainbrace to pass the time",
+        "requires": {
+          "rum": 3
+        },
+        "outcomes": [
+          {
+            "text": "If you can't sail, you may as well sing.",
+            "effects": {
+              "days": 2,
+              "rum": -3,
+              "morale": 5
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rats_in_the_hold",
+    "title": "Rats in the hold",
+    "text": "The cook comes up white-faced: the rats have got into the stores.",
+    "choices": [
+      {
+        "text": "Smoke them out",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "Brimstone in the hold. The rats are gone, and most of the rum with them.",
+            "effects": {
+              "rum": -4
+            }
+          },
+          {
+            "chance": 1,
+            "text": "The smoke gets out of hand. A small fire, quickly put out.",
+            "effects": {
+              "rum": -2,
+              "hull": -3
+            }
+          }
+        ]
+      },
+      {
+        "text": "Let the ship's cat earn her keep",
+        "outcomes": [
+          {
+            "text": "She does her best. You still lose some stores.",
+            "effects": {
+              "rum": -2,
+              "morale": 2
+            }
+          }
+        ]
+      },
+      {
+        "text": "Offer a bounty per tail",
+        "requires": {
+          "gold": 5
+        },
+        "outcomes": [
+          {
+            "text": "The hands make a game of it. 300 tails by the end of the dog watch.",
+            "effects": {
+              "gold": -5,
+              "morale": 5
+            }
+          }
+        ]
+      }
+    ]
   }
 ]
