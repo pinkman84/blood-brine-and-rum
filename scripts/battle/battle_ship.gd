@@ -64,6 +64,12 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.max_hands = run.max_hands
 	s.morale_factor = Morale.factor(run.morale)
 	s.ammo = run.ammo.duplicate()
+	# Relics and upgrades (see Perks).
+	s.guns += roundi(Perks.add(run, "guns"))
+	s.base_evasion += Perks.add(run, "evasion")
+	s.base_accuracy += Perks.add(run, "accuracy")
+	s.accuracy = s.base_accuracy
+	s.reload_time *= Perks.mult(run, "reload")
 	return s
 
 

@@ -17,14 +17,16 @@
       "grape_shot": 10,
       "heated_shot": 6
     },
-    "unlocked_at_start": true,
     "flag_color": "111111",
     "max_sails": 20,
     "evasion": 0.15,
     "layout": "sloop",
     "max_hands": 100,
     "specialist_slots": 8,
-    "start_rep": {}
+    "start_rep": {},
+    "unlock": {
+      "type": "always"
+    }
   },
   {
     "id": "brigantine",
@@ -45,7 +47,6 @@
       "grape_shot": 15,
       "heated_shot": 6
     },
-    "unlocked_at_start": true,
     "max_sails": 24,
     "evasion": 0.08,
     "layout": "brigantine",
@@ -56,7 +57,12 @@
       "brotherhood": 15,
       "rivals": -10
     },
-    "flag_color": "111111"
+    "flag_color": "111111",
+    "unlock": {
+      "type": "meta",
+      "key": "quest_pike",
+      "hint": "Find a certain Company sailing master at sea and see his mutiny through."
+    }
   },
   {
     "id": "privateer",
@@ -76,7 +82,6 @@
       "grape_shot": 10,
       "heated_shot": 2
     },
-    "unlocked_at_start": true,
     "flag_color": "2e4a8a",
     "max_sails": 22,
     "evasion": 0.17,
@@ -87,6 +92,47 @@
       "navy": 50,
       "brotherhood": -35,
       "rivals": -15
+    },
+    "unlock": {
+      "type": "meta",
+      "key": "reached_final_sea",
+      "hint": "Reach the last sea for the first time."
+    }
+  },
+  {
+    "id": "black_frigate",
+    "name": "Black frigate",
+    "description": "The ship of a captain who has beaten the Company once already. Heavy, well gunned and known in every port: the Brotherhood toasts you, the Navy wants your head, and rivals want your name.",
+    "max_hull": 46,
+    "guns_per_side": 5,
+    "starting_gold": 30,
+    "starting_crew": [
+      "helmsman",
+      "gunner",
+      "carpenter",
+      "boarding_master"
+    ],
+    "starting_ammo": {
+      "round_shot": 50,
+      "chain_shot": 12,
+      "grape_shot": 12,
+      "heated_shot": 8
+    },
+    "flag_color": "111111",
+    "max_sails": 22,
+    "evasion": 0.07,
+    "layout": "brigantine",
+    "max_hands": 150,
+    "specialist_slots": 8,
+    "start_rep": {
+      "brotherhood": 20,
+      "navy": -20,
+      "rivals": -15
+    },
+    "unlock": {
+      "type": "meta",
+      "key": "victories",
+      "hint": "Beat the Company and finish a voyage."
     }
   }
 ]

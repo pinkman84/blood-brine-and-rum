@@ -1,0 +1,145 @@
+[
+  {
+    "id": "aeolus_horn",
+    "name": "The Aeolus Horn",
+    "description": "Blow it, and the wind blows the way you point it. Sail any heading you choose. The Company will never stop hunting you for it.",
+    "mods": {},
+    "gain": {},
+    "story": true
+  },
+  {
+    "id": "lucky_doubloon",
+    "name": "Lucky doubloon",
+    "description": "A coin that always lands heads. +20% gold from prizes.",
+    "mods": {
+      "gold_mult": 1.2
+    },
+    "gain": {}
+  },
+  {
+    "id": "masters_sextant",
+    "name": "Master's sextant",
+    "description": "You always know a quieter route. The Company hunt grows 1 slower each day.",
+    "mods": {
+      "hunt_per_day_add": -1
+    },
+    "gain": {}
+  },
+  {
+    "id": "copper_sheathing",
+    "name": "Copper sheathing",
+    "description": "A clean, fast hull. +4% dodge.",
+    "mods": {
+      "evasion_add": 0.04
+    },
+    "gain": {}
+  },
+  {
+    "id": "brass_sights",
+    "name": "Brass gun sights",
+    "description": "Taken from a Navy gunnery school. +5% accuracy.",
+    "mods": {
+      "accuracy_add": 0.05
+    },
+    "gain": {}
+  },
+  {
+    "id": "powder_monkeys",
+    "name": "Powder monkeys",
+    "description": "Quick lads who keep the guns fed. Reload 10% faster.",
+    "mods": {
+      "reload_mult": 0.9
+    },
+    "gain": {}
+  },
+  {
+    "id": "ships_cat",
+    "name": "Ship's cat",
+    "description": "Good luck, and death to rats. +1 morale every day at sea.",
+    "mods": {
+      "morale_per_node_add": 1
+    },
+    "gain": {}
+  },
+  {
+    "id": "surgeons_chest",
+    "name": "Surgeon's chest",
+    "description": "Laudanum, lint and a clean saw. Specialists recover 15 more health after a win.",
+    "mods": {
+      "heal_add": 15
+    },
+    "gain": {}
+  },
+  {
+    "id": "carpenters_stores",
+    "name": "Carpenter's stores",
+    "description": "Seasoned oak and a keg of nails. +3 hull patched after every win.",
+    "mods": {
+      "repair_add": 3
+    },
+    "gain": {}
+  },
+  {
+    "id": "spare_canvas",
+    "name": "Spare canvas",
+    "description": "A sail locker that's never empty. +5 sails mended after every win.",
+    "mods": {
+      "mend_add": 5
+    },
+    "gain": {}
+  },
+  {
+    "id": "smugglers_ledger",
+    "name": "Smuggler's ledger",
+    "description": "Names, prices and who owes whom. Everything in port costs 10% less.",
+    "mods": {
+      "price_mult": 0.9
+    },
+    "gain": {}
+  },
+  {
+    "id": "letters_of_introduction",
+    "name": "Letters of introduction",
+    "description": "Forged, mostly. Reputation gains are half as big again.",
+    "mods": {
+      "rep_gain_mult": 1.5
+    },
+    "gain": {}
+  },
+  {
+    "id": "grog_tub",
+    "name": "The grog tub",
+    "description": "'The King, God bless him.' Morale losses are a quarter smaller.",
+    "mods": {
+      "morale_loss_mult": 0.75
+    },
+    "gain": {}
+  },
+  {
+    "id": "boarding_axes",
+    "name": "Boarding axes",
+    "description": "One for every hand. Your boarders and defenders fight 15% harder.",
+    "mods": {
+      "boarding_mult": 1.15
+    },
+    "gain": {}
+  },
+  {
+    "id": "oak_bulkheads",
+    "name": "Oak bulkheads",
+    "description": "Doubled timbers below the waterline. +8 hull.",
+    "mods": {},
+    "gain": {
+      "max_hull": 8
+    }
+  },
+  {
+    "id": "extra_hammocks",
+    "name": "Extra hammocks",
+    "description": "Slung in every corner. Room for 15 more hands.",
+    "mods": {},
+    "gain": {
+      "max_hands": 15
+    }
+  }
+]

@@ -1,14 +1,20 @@
 extends Control
-## The sea map: one sea's branching routes from entry (left) to the exit
-## fight (right). Click a highlighted node to sail there. Each step costs a
-## day and a rum ration (see GameState.finish_node).
+## The sea chart: a web of places from the sea's entrance (left) to the exit
+## fight (right), with the port on a strait in the middle. Click a glowing
+## node to sail there: any neighbour, forwards, sideways or back. Every move
+## costs a day and a rum ration and lets the Company hunt grow, so wandering
+## has a price (see GameState.finish_node).
 ##
-## Fog of war: you can see what lies in the next REVEAL steps, and the exit.
-## Anything further shows as "?". The map itself comes from SeaMapGen.
+## Most of the sea is open water, where now and then a sail finds you
+## (AMBUSH_CHANCE). Waters you've already sailed are empty. Fog of war: you
+## know what's at the places next to anywhere you've been, plus the port and
+## the exit; the rest shows as "?". The map itself comes from SeaMapGen.
 
 const BG_COLOR := Color("1d3b4f")
 const NODE_RADIUS := 9.0
-const REVEAL := 2
+const AMBUSH_CHANCE := 0.15  # a ship finds us in open water we haven't sailed before
+const ISLAND_COLOR := Color("b8a47a")
+const REEF_COLOR := Color("5f8f8a")
 const STYLES := {
 	"battle": ["B", Color("c0392b"), "Enemy ship"],
 	"elite": ["!", Color("8e44ad"), "Sea exit: veteran captain"],
@@ -17,12 +23,12 @@ const STYLES := {
 	"settlement": ["$", Color("27ae60"), "Settlement: trade or raid"],
 	"haven": ["H", Color("a93226"), "Pirate haven: shore leave, hire crew"],
 	"port": ["P", Color("d4ac0d"), "Port"],
-	"calm": ["~", Color("7f8c8d"), "Calm seas"],
+	"outpost": ["$", Color("27ae60"), "Outpost: a place to trade"],
+	"calm": ["~", Color("3f6f8a"), "Open water"],
 	"storm": ["S", Color("34495e"), "Storm clouds"],
 	"treasure": ["X", Color("e67e22"), "Treasure, if the old chart is true"],
 }
 const UNKNOWN_COLOR := Color("4a5a66")
-const CALM_MORALE := 1
 
 var _run: RunState
 var _hover := -1
@@ -54,8 +60,8 @@ func _ready() -> void:
 	add_child(_note)
 
 	_info = Label.new()
-	_info.position = Vector2(12, 262)
-	_info.size = Vector2(440, 90)
+	_info.position = Vector2(12, 246)
+	_info.size = Vector2(440, 112)
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_info)
 
@@ -72,6 +78,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color.from_string(str(Voyage.sea(_run).get("color", "")), BG_COLOR))
 	_draw_hunt()
 	_draw_reputation()
+	_draw_islands()
 	var nodes: Array = _run.map["nodes"]
 	var font := ThemeDB.fallback_font
 
@@ -90,7 +97,7 @@ func _draw() -> void:
 		var known := _is_known(node)
 		var style: Array = STYLES.get(str(node["type"]), ["?", UNKNOWN_COLOR, ""])
 		var fill: Color = style[1] if known else UNKNOWN_COLOR
-		if _was_visited(id) and id != here:
+		if _was_visited(id) and id != here and str(node["type"]) != "port" and str(node["type"]) != "outpost":
 			fill = fill.darkened(0.55)
 		if reachable.has(id):
 			var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 200.0)
@@ -130,11 +137,17 @@ func _gui_input(event: InputEvent) -> void:
 
 func _sail_to(id: int) -> void:
 	var node: Dictionary = _run.map["nodes"][id]
+	var been_here := _was_visited(id)
 	_run.map["current"] = id
-	(_run.map["visited"] as Array).append(id)
+	if not been_here:
+		(_run.map["visited"] as Array).append(id)
 	_run.days += 1
-	Voyage.change_hunt(_run, Voyage.HUNT_PER_DAY)
+	Voyage.change_hunt(_run, maxi(1, Voyage.HUNT_PER_DAY + roundi(Perks.add(_run, "hunt_per_day"))))
 	var type := str(node["type"])
+	if been_here and type != "port" and type != "outpost":
+		type = "sailed"  # nothing left here; ports and outposts stay where they are
+	elif type == "calm" and randf() < AMBUSH_CHANCE:
+		type = "battle"  # a sail on the horizon, closing fast
 	if _run.hunt >= Voyage.INTERCEPT and type != "elite":
 		# The hunt has found us: whatever was waiting here, a Company hunter is upon us.
 		_run.hunter_pending = true
@@ -151,9 +164,13 @@ func _sail_to(id: int) -> void:
 			GameState.change_screen(GameState.Screen.EVENT)
 		"shop", "settlement", "haven", "port":
 			GameState.change_screen(GameState.Screen.SHOP)
+		"outpost":
+			GameState.change_screen(GameState.Screen.OUTPOST)
+		"sailed":
+			_run.last_note = "Waters we've sailed before. Nothing here but our own wake."
+			GameState.finish_node()
 		_:
-			Morale.change(_run, CALM_MORALE)
-			_run.last_note = "Calm seas and a fair wind. The crew rests (+%d morale)." % CALM_MORALE
+			_run.last_note = "Open water and a fair wind. A quiet day's sailing."
 			GameState.finish_node()
 
 
@@ -181,6 +198,18 @@ func _draw_reputation() -> void:
 		y += 12.0
 
 
+## Scenery from the map: islands, reefs and the shores of the port's strait.
+func _draw_islands() -> void:
+	for i: Variant in _run.map.get("islands", []):
+		var at := Vector2(float(i[0]), float(i[1]))
+		var radius := Vector2(float(i[2]), float(i[3]))
+		draw_set_transform(at, 0.0, radius)
+		draw_circle(Vector2.ZERO, 1.25, Color(REEF_COLOR, 0.35))  # shallows
+		draw_circle(Vector2.ZERO, 1.0, ISLAND_COLOR)
+		draw_circle(Vector2(-0.1, -0.1), 0.6, ISLAND_COLOR.darkened(0.25))  # scrub
+	draw_set_transform(Vector2.ZERO)
+
+
 func _pos(node: Dictionary) -> Vector2:
 	var p: Array = node["pos"]
 	return Vector2(float(p[0]), float(p[1]))
@@ -198,11 +227,19 @@ func _reachable() -> Array:
 	return result
 
 
-## Fog of war: the next REVEAL steps, anything visited, and the exit are known.
+## Fog of war: we know the port, the exit, anywhere we've been, and whatever
+## the lookout can see from there (their neighbours). Before the first move,
+## that's the places we could enter the sea.
 func _is_known(node: Dictionary) -> bool:
-	var layer := int(node["layer"])
-	return layer < _run.node_index + REVEAL or str(node["type"]) == "elite" or str(node["type"]) == "port" \
-		or _was_visited(int(node["id"]))
+	var id := int(node["id"])
+	if str(node["type"]) == "elite" or str(node["type"]) == "port" or _was_visited(id):
+		return true
+	if int(_run.map["current"]) == -1:
+		return int(node["layer"]) == 0
+	for l: Variant in node["links"]:
+		if _was_visited(int(l)):
+			return true
+	return false
 
 
 ## Saved maps come back from JSON with numbers as floats, so compare as ints.
@@ -221,7 +258,20 @@ func _node_at(point: Vector2) -> int:
 
 
 func _refresh_info() -> void:
-	var text := ScreenBase.summary(_run) + "\nDay %d at sea." % _run.days
+	# The sea, step and hunt are shown elsewhere on this screen, so keep this short.
+	var text := "Gold %d   Hull %d/%d   Sails %d/%d   Hands %d/%d\nMorale %d (%s)   Rum %d%s   Specialists %d   Day %d" % [
+		_run.gold, _run.hull, _run.max_hull, _run.sails, _run.max_sails, _run.hands, _run.max_hands,
+		_run.morale, Morale.mood(_run.morale), _run.rum, " (cask dry!)" if _run.rum <= 0 else "", _run.crew.size(), _run.days]
+	var relics := Perks.relic_names(_run, false)
+	if relics != "":
+		text += "\nRelics: %s" % relics
+	for goal in Hub.active_quests(_run):
+		text += "\nQuest: %s" % goal
+	if not _run.upgrades.is_empty():
+		var fitted: Array[String] = []
+		for id: Variant in _run.upgrades:
+			fitted.append("%s x%d" % [str(Data.get_item("upgrades", str(id)).get("name", id)).to_lower(), int(_run.upgrades[id])])
+		text += "\nFitted: %s" % ", ".join(fitted)
 	if _hover >= 0:
 		var node: Dictionary = _run.map["nodes"][_hover]
 		var style: Array = STYLES.get(str(node["type"]), ["?", UNKNOWN_COLOR, "Unknown"])
@@ -229,7 +279,11 @@ func _refresh_info() -> void:
 		if node.has("owner"):
 			var kind := str(Data.get_item("factions", str(node["owner"])).get("port", {}).get("kind", "port"))
 			label = "%s, %s: trade, or attack for a richer prize" % [node.get("name", "Port"), kind]
-		text = (label if _is_known(node) else "Unknown waters") + "\n" + text
+		if str(node["type"]) == "outpost":
+			label = "%s: a place to trade" % node.get("name", "Outpost")
+		elif _was_visited(_hover) and str(node["type"]) != "port":
+			label = "Waters we've sailed: nothing left here"
+		text = (label if _is_known(node) else "Uncharted waters") + "\n" + text
 	else:
 		text = "Sound the Aeolus Horn and choose your heading: click a glowing node.\n" + text
 	_info.text = text

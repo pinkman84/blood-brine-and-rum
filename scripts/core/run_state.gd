@@ -4,13 +4,13 @@ extends RefCounted
 ## for saving. When you add a field, add it to to_dict() and from_dict().
 
 const SEAS_PER_RUN := 5
-const NODES_PER_SEA := SeaMapGen.LAYERS  # steps from a sea's entrance to its exit
+const NODES_PER_SEA := SeaMapGen.LAYERS  # columns across a sea's chart, entrance to exit
 const START_HANDS := 0.8  # a run starts with this share of the ship's hands
 
 var run_seed: int = 0
 var ship_id: String = ""
 var sea_number: int = 1  # which sea of the run we're in, 1-based
-var node_index: int = 0  # nodes resolved in the current sea
+var node_index: int = 0  # how far across the current sea we are (chart column)
 var gold: int = 0
 var hull: int = 0
 var max_hull: int = 0
@@ -39,6 +39,10 @@ var forced_event := ""  # an event that happens before we sail on (a mutiny)
 var last_mutiny := -99  # the day the crew last rose; they don't rise again for a while
 var met_captains: Array = []  # elite captains already fought this run
 var reputation: Dictionary = {}  # faction id -> -100..100 (see Reputation)
+var relics: Array = []  # relic ids we carry (see Perks)
+var upgrades: Dictionary = {}  # upgrade id -> level bought (see Perks)
+var quests: Dictionary = {}  # quest id -> "active" or "done" this voyage (see Hub)
+var loot_pending := ""  # "battle" or "elite": we've won and are choosing our plunder
 var battles_won: int = 0
 
 
@@ -46,13 +50,13 @@ static func new_run(ship: Dictionary) -> RunState:
 	var run := RunState.new()
 	run.run_seed = randi()
 	run.ship_id = str(ship["id"])
-	run.max_hull = int(ship["max_hull"])
+	run.max_hull = int(ship["max_hull"]) + Hub.start_hull()  # the home port's carpenter
 	run.hull = run.max_hull
 	run.max_sails = int(ship.get("max_sails", 20))
 	run.sails = run.max_sails
 	run.gold = int(ship.get("starting_gold", 0))
-	run.max_hands = int(ship.get("max_hands", 100))
-	run.hands = roundi(run.max_hands * START_HANDS)
+	run.max_hands = int(ship.get("max_hands", 100)) + Hub.start_max_hands()  # the old captain's word
+	run.hands = roundi(run.max_hands * minf(1.0, START_HANDS + Hub.start_crew_share()))
 	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run.run_seed
@@ -67,6 +71,7 @@ static func new_run(ship: Dictionary) -> RunState:
 	for ammo_id: Variant in start_ammo:
 		run.ammo[str(ammo_id)] = int(start_ammo[ammo_id])
 	Reputation.start(run, ship)
+	Perks.give_relic(run, Perks.STARTING_RELIC)
 	return run
 
 
@@ -103,6 +108,10 @@ func to_dict() -> Dictionary:
 		"last_mutiny": last_mutiny,
 		"met_captains": met_captains,
 		"reputation": reputation,
+		"relics": relics,
+		"upgrades": upgrades,
+		"loot_pending": loot_pending,
+		"quests": quests,
 		"battles_won": battles_won,
 	}
 
@@ -156,6 +165,14 @@ static func from_dict(data: Dictionary) -> RunState:
 	else:
 		for f: Variant in rep:
 			run.reputation[str(f)] = int(rep[f])
+	run.relics = data.get("relics", [Perks.STARTING_RELIC])
+	var ups: Dictionary = data.get("upgrades", {})
+	for u: Variant in ups:
+		run.upgrades[str(u)] = int(ups[u])
+	run.loot_pending = str(data.get("loot_pending", ""))
+	var saved_quests: Dictionary = data.get("quests", {})
+	for q: Variant in saved_quests:
+		run.quests[str(q)] = str(saved_quests[q])
 	if run.sea_id == "":  # saves from before the sea chart
 		run.sea_id = Voyage.START_SEA
 		run.route = [Voyage.START_SEA]

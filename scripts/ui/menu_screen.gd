@@ -6,7 +6,7 @@ func _title() -> String:
 
 
 func _build() -> void:
-	add_button("New voyage", GameState.change_screen.bind(GameState.Screen.SHIP_SELECT))
+	add_button("Home port: %s" % Hub.HOME_PORT, GameState.change_screen.bind(GameState.Screen.HUB))
 	add_button("Continue voyage", GameState.continue_run, SaveSystem.has_run())
 	add_button("Quit", get_tree().quit)
 

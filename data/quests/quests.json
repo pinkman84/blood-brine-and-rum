@@ -1,0 +1,13 @@
+[
+  {
+    "id": "pike",
+    "name": "Pike's mutiny",
+    "goal": {
+      "type": "capture",
+      "faction": "company"
+    },
+    "goal_text": "Take a Company ship as a prize (make her strike, or board her) while Jonas Pike is aboard.",
+    "done_text": "Jonas Pike hails her crew by name. Half of them were his shipmates, and they've no love for the Company. They'll bring a brig over to your side: the Turncoat brigantine will be waiting at your home port.",
+    "unlocks": "brigantine"
+  }
+]

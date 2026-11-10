@@ -8,7 +8,7 @@ extends Node
 ## Note: JSON numbers load as floats. Wrap them in int() where you need ints.
 
 const DATA_ROOT := "res://data"
-const CATEGORIES: Array[String] = ["ammo", "ships", "enemies", "layouts", "crew", "names", "factions", "events", "seas"]
+const CATEGORIES: Array[String] = ["ammo", "ships", "enemies", "layouts", "crew", "names", "factions", "events", "seas", "relics", "upgrades", "outposts", "hub", "quests"]
 
 var _tables: Dictionary = {}  # category -> { id -> Dictionary }
 

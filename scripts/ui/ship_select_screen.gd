@@ -12,14 +12,16 @@ func _title() -> String:
 
 func _build() -> void:
 	if _ships.is_empty():
-		for s: Dictionary in Data.get_all("ships"):
-			if bool(s.get("unlocked_at_start", true)):
-				_ships.append(s)
+		_ships = Data.get_all("ships")  # locked ones are listed too, with how to earn them
 	for i in _ships.size():
 		var mark := "> " if i == _selected else "   "
-		add_button(mark + str(_ships[i].get("name", "Ship")), _select.bind(i))
-	add_button("Set sail in the %s" % str(_ships[_selected].get("name", "ship")).to_lower(), _sail)
-	add_button("Back", GameState.change_screen.bind(GameState.Screen.MENU))
+		var locked := "" if Hub.ship_unlocked(_ships[i]) else " (locked)"
+		add_button(mark + str(_ships[i].get("name", "Ship")) + locked, _select.bind(i))
+	if Hub.ship_unlocked(_ships[_selected]):
+		add_button("Set sail in the %s" % str(_ships[_selected].get("name", "ship")).to_lower(), _sail)
+	else:
+		add_button("Locked: %s" % Hub.unlock_hint(_ships[_selected]), func() -> void: pass, false)
+	add_button("Back to %s" % Hub.HOME_PORT, GameState.change_screen.bind(GameState.Screen.HUB))
 
 
 func refresh() -> void:
@@ -31,8 +33,8 @@ func refresh() -> void:
 		str(s.get("description", "")),
 		"",
 		"Hull %d   Sails %d   Guns %d a side   Hands %d" % [
-			int(s.get("max_hull", 0)), int(s.get("max_sails", 0)), int(s.get("guns_per_side", 0)),
-			roundi(int(s.get("max_hands", 100)) * RunState.START_HANDS)],
+			int(s.get("max_hull", 0)) + Hub.start_hull(), int(s.get("max_sails", 0)), int(s.get("guns_per_side", 0)),
+			roundi((int(s.get("max_hands", 100)) + Hub.start_max_hands()) * minf(1.0, RunState.START_HANDS + Hub.start_crew_share()))],
 		"Gold %d   Crew: %s" % [int(s.get("starting_gold", 0)), ", ".join(crew)],
 		"",
 		"How they'll greet you:",

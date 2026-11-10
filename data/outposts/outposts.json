@@ -1,0 +1,97 @@
+[
+  {
+    "id": "trading_hulk",
+    "name": "Trader's hulk",
+    "text": "An old merchantman, dismasted and moored for good, with a shop on her gun deck. The owner asks no questions.",
+    "prices": 1.0,
+    "always": [
+      "rum",
+      "chain_shot",
+      "grape_shot"
+    ],
+    "sometimes": [
+      "heated_shot",
+      "relic",
+      "hull"
+    ],
+    "extras": 2,
+    "hire_chance": 0.4,
+    "augment_chance": 0.4
+  },
+  {
+    "id": "smugglers_cove",
+    "name": "Smugglers' cove",
+    "text": "Lanterns in a hidden inlet. Free traders with goods that never saw a customs house.",
+    "prices": 0.85,
+    "always": [
+      "rum",
+      "heated_shot"
+    ],
+    "sometimes": [
+      "chain_shot",
+      "grape_shot",
+      "hands",
+      "relic"
+    ],
+    "extras": 2,
+    "hire_chance": 0.5,
+    "augment_chance": 0.35
+  },
+  {
+    "id": "careening_beach",
+    "name": "Careening beach",
+    "text": "A shelving beach where a gang of shipwrights will heave your hull over and scrape, patch and caulk her, for a price.",
+    "prices": 1.0,
+    "always": [
+      "hull",
+      "sails"
+    ],
+    "sometimes": [
+      "upgrade",
+      "upgrade",
+      "hands",
+      "rum"
+    ],
+    "extras": 2,
+    "hire_chance": 0.25,
+    "augment_chance": 0.5
+  },
+  {
+    "id": "fishing_village",
+    "name": "Fishing village",
+    "text": "Nets drying on the shingle and smoke from a dozen huts. They'll sell you what they have, and some of the young men want to see the world.",
+    "prices": 0.9,
+    "always": [
+      "rum",
+      "hands"
+    ],
+    "sometimes": [
+      "surgeon",
+      "sails",
+      "hull"
+    ],
+    "extras": 2,
+    "hire_chance": 0.5,
+    "augment_chance": 0.1
+  },
+  {
+    "id": "ship_chandler",
+    "name": "Ship chandler",
+    "text": "A stone warehouse on a lonely quay, stacked to the rafters with cordage, canvas, powder and shot.",
+    "prices": 1.1,
+    "always": [
+      "chain_shot",
+      "grape_shot",
+      "sails"
+    ],
+    "sometimes": [
+      "heated_shot",
+      "upgrade",
+      "relic",
+      "hull"
+    ],
+    "extras": 2,
+    "hire_chance": 0.3,
+    "augment_chance": 0.5
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "reinforced_hull",
+    "name": "Reinforced hull",
+    "description": "+8 hull",
+    "cost": 45,
+    "max_level": 3,
+    "mods": {},
+    "gain": {
+      "max_hull": 8
+    }
+  },
+  {
+    "id": "extra_guns",
+    "name": "Another gun a side",
+    "description": "+1 gun on each broadside",
+    "cost": 70,
+    "max_level": 2,
+    "mods": {
+      "guns_add": 1
+    },
+    "gain": {}
+  },
+  {
+    "id": "taller_masts",
+    "name": "Taller masts",
+    "description": "+4 sails, +2% dodge",
+    "cost": 40,
+    "max_level": 3,
+    "mods": {
+      "evasion_add": 0.02
+    },
+    "gain": {
+      "max_sails": 4
+    }
+  },
+  {
+    "id": "more_berths",
+    "name": "More berths",
+    "description": "Room for 15 more hands",
+    "cost": 35,
+    "max_level": 3,
+    "mods": {},
+    "gain": {
+      "max_hands": 15
+    }
+  },
+  {
+    "id": "gun_tackle",
+    "name": "Better gun tackle",
+    "description": "Reload 6% faster",
+    "cost": 50,
+    "max_level": 3,
+    "mods": {
+      "reload_mult": 0.94
+    },
+    "gain": {}
+  },
+  {
+    "id": "gun_sights",
+    "name": "Gun sights",
+    "description": "+3% accuracy",
+    "cost": 50,
+    "max_level": 3,
+    "mods": {
+      "accuracy_add": 0.03
+    },
+    "gain": {}
+  }
+]

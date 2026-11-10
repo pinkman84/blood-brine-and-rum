@@ -37,7 +37,7 @@ const HANDS_SPREAD := 0.1  # each ship varies by up to this much either way
 const SPECIALISTS_EARLY := 0.34  # share of her specialists an early enemy carries (at least one)
 const SPECIALISTS_LATE := 1.0
 
-const HUNT_PER_DAY := 4
+const HUNT_PER_DAY := 3
 const HUNT_PER_COMPANY_SHIP := 8
 const HUNT_NEW_SEA := -15
 const HUNTED := 50  # hunters start to appear

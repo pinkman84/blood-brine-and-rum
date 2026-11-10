@@ -62,6 +62,8 @@ static func change(run: RunState, faction: String, amount: int) -> String:
 	if bool(Data.get_item("factions", faction).get("fixed", false)):
 		return ""
 	var before := of(run, faction)
+	if amount > 0:
+		amount = roundi(amount * Perks.mult(run, "rep_gain"))
 	run.reputation[faction] = clampi(before + amount, MIN, ceiling(faction))
 	var moved := int(run.reputation[faction]) - before
 	if moved == 0:
