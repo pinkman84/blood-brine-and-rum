@@ -3,7 +3,8 @@ extends RefCounted
 ## The event system: picking an event, checking a choice's requirements, and
 ## applying an outcome's effects to the run. Events live in data/events.
 ##
-## Event:   { id, title, text, weight?, seas?: [ids], min_sea?, max_sea?, pool?, choices: [...] }
+## Event:   { id, title, text, weight?, seas?: [ids], min_sea?, max_sea?, pool?, unless_meta?, choices: [...] }
+##   unless_meta: a meta key (see Hub); once it's set the event never comes up again
 ##   pool: which kind of node draws it. None for "?" event nodes; "storm" and
 ##   "treasure" for those nodes; "mutiny" is only ever forced (GameState).
 ## Choice:  { text, requires?: {...}, outcomes: [ { chance?, text, effects: {...} } ] }
@@ -22,6 +23,7 @@ extends RefCounted
 ##   join: a specialist role id, or "random", who joins if there's a free slot
 ##   battle: "random" (this sea's mix) or an enemy id; the node becomes a fight
 ##   rep: { faction id: change }
+##   quest: a quest id to start (data/quests; see Hub)
 ##   days: time lost; each day drinks a rum ration and lets the Company hunt grow
 ##   end_run: true; the voyage is over (the event screen ends the run)
 
@@ -62,6 +64,8 @@ static func _fits(run: RunState, e: Dictionary, allow_seen: bool) -> bool:
 	if not seas.is_empty() and not seas.has(run.sea_id):
 		return false
 	if run.sea_number < int(e.get("min_sea", 1)) or run.sea_number > int(e.get("max_sea", 99)):
+		return false
+	if e.has("unless_meta") and SaveSystem.meta_int(str(e["unless_meta"])) > 0:
 		return false
 	return true
 
@@ -171,6 +175,8 @@ static func apply(run: RunState, effects: Dictionary) -> Array[String]:
 		run.ammo[id] = maxi(0, have + int(ammo[id]))
 		lines.append("%+d %s" % [int(run.ammo[id]) - have, str(Data.get_item("ammo", id).get("name", id)).to_lower()])
 	lines.append_array(Reputation.apply(run, effects.get("rep", {})))
+	if effects.has("quest"):
+		lines.append(Hub.start_quest(run, str(effects["quest"])))
 	if effects.has("wound"):
 		lines.append(_wound(run, int(effects["wound"])))
 	if effects.has("join"):
@@ -200,9 +206,6 @@ static func _join(run: RunState, role: String) -> String:
 	var slots := int(Data.get_item("ships", run.ship_id).get("specialist_slots", 8))
 	if run.crew.size() >= slots:
 		return "No berth free for a new specialist"
-	if role == "random":
-		role = str((Data.get_all("crew").pick_random() as Dictionary)["id"])
-	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
-	var member := {"name": str(names.pick_random()), "role": role, "level": 1, "health": 100}
+	var member := Hub.new_specialist(role)
 	run.crew.append(member)
-	return "%s the %s joins the crew" % [member["name"], str(Data.get_item("crew", role).get("name", role)).to_lower()]
+	return "%s the %s joins the crew" % [member["name"], Hub.specialist_title(member)]

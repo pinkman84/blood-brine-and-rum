@@ -1872,5 +1872,49 @@
         ]
       }
     ]
+  },
+  {
+    "id": "company_mutineer",
+    "title": "A man in the water",
+    "weight": 2,
+    "unless_meta": "quest_pike",
+    "text": "A lone swimmer, a mile from a Company convoy and making for you. Hauled aboard, he gives his name as Jonas Pike, sailing master, and says he jumped rather than be flogged for speaking up for his men. Half the Company's crews would turn their coats, he says, if someone showed them it could be done.",
+    "choices": [
+      {
+        "text": "Give him a berth and hear him out",
+        "outcomes": [
+          {
+            "text": "Pike knows the Company's ships and the men aboard them. Take one as a prize with him on your deck, he says, and he'll do the rest.",
+            "effects": {
+              "quest": "pike",
+              "morale": 2
+            }
+          }
+        ]
+      },
+      {
+        "text": "Put him to work with the hands",
+        "outcomes": [
+          {
+            "text": "He works hard and says little more.",
+            "effects": {
+              "hands": 1
+            }
+          }
+        ]
+      },
+      {
+        "text": "Sell him back to the Company",
+        "outcomes": [
+          {
+            "text": "The convoy's commodore pays for him without a word. The crew don't meet your eye.",
+            "effects": {
+              "gold": 25,
+              "morale": -8
+            }
+          }
+        ]
+      }
+    ]
   }
 ]

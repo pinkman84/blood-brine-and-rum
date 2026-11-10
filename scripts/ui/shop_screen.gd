@@ -12,6 +12,7 @@ extends ScreenBase
 ##     forced labour  a free full refit and a free surgeon
 ##     who's left     supplies and hiring at half price, townsfolk pressed into the crew
 ##     loot           gold, rum and shot, but the market is stripped and the hunt grows
+##   shipyard     ship upgrades (Perks): a few on offer at each trading port
 ## Arriving with low morale, some hands desert (or, in a haven, stay ashore).
 ## The owner's opinion of you (Reputation) scales prices, adds a hire when
 ## they're friendly, and if they hate you they won't trade at all.
@@ -36,6 +37,7 @@ const STAY_ASHORE_MORALE := 55  # in a haven, below this some hands stay ashore
 const LIE_LOW_HUNT := -20
 const LIE_LOW_RUM := 3
 const RANSOM_EACH := 2  # keep in step with PRISONER_RANSOM in battle_screen.gd
+const YARD_OFFERS := 3  # upgrades a port's shipyard can fit this visit
 const TAKEN_PRICES := 0.5  # what's left of a beaten town sells cheap
 const PRESS_HANDS := 10  # townsfolk forced into the crew
 const LOOT_HUNT := 10  # on top of the raid itself
@@ -47,6 +49,7 @@ var _name := ""
 var _arrived := false
 var _left_ship := 0
 var _offers: Array = []
+var _yard: Array = []  # upgrade ids the shipyard offers this visit
 var _used := {}  # one-off services already taken this visit
 var _taken := false  # we beat the fort: the town is ours
 var _note := ""  # what just happened ashore
@@ -69,7 +72,13 @@ func _read_port() -> void:
 	_owner = str(node.get("owner", "brotherhood" if node.get("type", "") == "haven" else "company"))
 	_port = Data.get_item("factions", _owner).get("port", {})
 	_name = str(node.get("name", "the harbour"))
-	_taken = run.port_taken
+	# You can come back to a port. What you did here stays done: a taken town
+	# stays taken, and one-off services stay used (kept on the map node).
+	_taken = run.port_taken or bool(node.get("taken", false))
+	if not node.is_empty():
+		if not node.has("used"):
+			node["used"] = {}
+		_used = node["used"]
 
 
 func _build() -> void:
@@ -107,7 +116,8 @@ func _add_occupied(run: RunState) -> void:
 	add_button("Buy %d heated shot (%d gold)" % [HEATED_AMOUNT, _price(HEATED_COST)], _buy.bind("heated_shot", HEATED_AMOUNT, HEATED_COST))
 	for i in _offers.size():
 		var o: Dictionary = _offers[i]
-		add_button("Hire %s, %s (%d gold)" % [o["name"], _role_name(o), _price(HIRE_COST)], _hire.bind(i))
+		add_button("Hire %s, %s (%d gold)" % [o["name"], _role_name(o), _price(HIRE_COST + Hub.hire_extra(o))], _hire.bind(i))
+	_add_shipyard(run)
 
 
 func _add_trade(run: RunState) -> void:
@@ -129,12 +139,34 @@ func _add_trade(run: RunState) -> void:
 	add_button("Sign on %d hands (%d gold)" % [RECRUIT_AMOUNT, _price(RECRUIT_COST)], _buy.bind("hands", RECRUIT_AMOUNT, RECRUIT_COST))
 	for i in _offers.size():
 		var o: Dictionary = _offers[i]
-		add_button("Hire %s, %s (%d gold)" % [o["name"], _role_name(o), _price(HIRE_COST)], _hire.bind(i))
+		add_button("Hire %s, %s (%d gold)" % [o["name"], _role_name(o), _price(HIRE_COST + Hub.hire_extra(o))], _hire.bind(i))
+	_add_shipyard(run)
 	if bool(_port.get("pay_off", false)):
 		for m: Dictionary in run.crew:
 			add_button("Pay off %s, %s" % [m.get("name", "?"), _role_name(m)], _pay_off.bind(m))
 	if bool(_port.get("ransom", false)) and run.prisoners > 0:
 		add_button("Ransom %d prisoners (%d gold)" % [run.prisoners, run.prisoners * RANSOM_EACH], _ransom)
+
+
+## The shipyard: upgrades that last the voyage, a level at a time.
+func _add_shipyard(run: RunState) -> void:
+	for id: String in _yard:
+		if not Perks.can_upgrade(run, id):
+			continue
+		var u := Data.get_item("upgrades", id)
+		var lvl := Perks.level(run, id)
+		var rank := "" if int(u.get("max_level", 1)) == 1 else " %d of %d" % [lvl + 1, int(u.get("max_level", 1))]
+		add_button("Shipyard: %s%s. %s (%d gold)" % [u.get("name", id), rank, u.get("description", ""), _price(Perks.upgrade_cost(run, id))],
+			_buy_upgrade.bind(id))
+
+
+func _buy_upgrade(id: String) -> void:
+	var run: RunState = GameState.run
+	if not _pay(Perks.upgrade_cost(run, id)):
+		return
+	Perks.buy_upgrade(run, id)
+	_note = "The shipwrights fit it before the tide: %s." % str(Data.get_item("upgrades", id).get("name", id)).to_lower()
+	_rebuild()
 
 
 func refresh() -> void:
@@ -166,16 +198,15 @@ func _arrive(run: RunState) -> void:
 	else:
 		_left_ship = roundi(run.hands * Morale.desertion_share(run.morale))
 	run.hands = maxi(1, run.hands - _left_ship)
-	var names: Array = Data.get_item("names", "crew_names").get("values", ["Sailor"])
-	var roles: Array = Data.get_all("crew")
+	for u: Dictionary in Perks.upgrade_offers(run, YARD_OFFERS):
+		_yard.append(str(u["id"]))
 	var hires := int(_port.get("hire_offers", 0))
 	if _taken:
 		hires = maxi(1, hires)  # someone in a beaten town will sign on
 	elif Reputation.of(run, _owner) >= Reputation.FRIENDLY and Reputation.will_trade(run, _owner):
 		hires += 1  # friends put the word out for you
 	for i in hires:
-		var role: Dictionary = roles.pick_random()
-		_offers.append({"name": str(names.pick_random()), "role": str(role["id"]), "level": 1, "health": 100})
+		_offers.append(Hub.new_specialist())
 
 
 func _rebuild() -> void:
@@ -187,7 +218,7 @@ func _rebuild() -> void:
 
 func _price(base: int) -> int:
 	var prices := TAKEN_PRICES if _taken else float(_port.get("prices", 1.0)) * Reputation.price_factor(GameState.run, _owner)
-	return maxi(1, roundi(base * prices))
+	return maxi(1, roundi(base * prices * Perks.mult(GameState.run, "price")))
 
 
 func _pay(base: int) -> bool:
@@ -200,7 +231,7 @@ func _pay(base: int) -> bool:
 
 
 func _role_name(m: Dictionary) -> String:
-	return str(Data.get_item("crew", str(m.get("role", ""))).get("name", "specialist")).to_lower()
+	return Hub.specialist_title(m)
 
 
 func _wounded(run: RunState) -> int:
@@ -277,7 +308,7 @@ func _buy(what: String, amount: int, base_cost: int) -> void:
 func _hire(index: int) -> void:
 	var run: RunState = GameState.run
 	var slots := int(Data.get_item("ships", run.ship_id).get("specialist_slots", 8))
-	if run.crew.size() >= slots or index >= _offers.size() or not _pay(HIRE_COST):
+	if run.crew.size() >= slots or index >= _offers.size() or not _pay(HIRE_COST + Hub.hire_extra(_offers[index])):
 		return
 	run.crew.append(_offers[index])
 	_offers.remove_at(index)

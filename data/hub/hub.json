@@ -1,0 +1,66 @@
+[
+  {
+    "id": "tavern",
+    "name": "The Drunken Gull",
+    "role": "tavern",
+    "costs": [
+      6,
+      14,
+      28
+    ],
+    "description": "A bar with a good name draws good people. Specialists you hire or pick up on a voyage are more often seasoned or veteran, and better at their trade.",
+    "levels": [
+      "A quarter of the specialists you meet are seasoned.",
+      "Nearly half are seasoned and a few are veterans.",
+      "Half are seasoned and a quarter are veterans."
+    ]
+  },
+  {
+    "id": "cartographer",
+    "name": "The cartographer's loft",
+    "role": "cartographer",
+    "costs": [
+      5,
+      12,
+      24
+    ],
+    "description": "An old chart-maker who knows where things were buried. Better charts mean more treasure marked on every sea.",
+    "levels": [
+      "Treasure turns up more often.",
+      "Treasure turns up about twice as often.",
+      "Treasure turns up nearly three times as often."
+    ]
+  },
+  {
+    "id": "carpenter",
+    "name": "The carpenter's yard",
+    "role": "carpenter",
+    "costs": [
+      6,
+      14,
+      28
+    ],
+    "description": "A slip and a sawpit. Your ship is strengthened before every voyage.",
+    "levels": [
+      "+4 hull on every voyage.",
+      "+8 hull on every voyage.",
+      "+12 hull on every voyage."
+    ]
+  },
+  {
+    "id": "old_captain",
+    "name": "The old captain's porch",
+    "role": "old captain",
+    "costs": [
+      6,
+      14,
+      28
+    ],
+    "description": "He's too old to sail, but men still follow his word. He finds you a bigger, fuller crew.",
+    "levels": [
+      "Room for 5 more hands, and a fuller crew.",
+      "Room for 10 more hands, and a fuller crew.",
+      "Room for 15 more hands, and nearly a full crew."
+    ]
+  }
+]

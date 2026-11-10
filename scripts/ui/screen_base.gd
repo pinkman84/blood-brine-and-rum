@@ -98,9 +98,9 @@ func run_summary() -> String:
 static func summary(run: RunState) -> String:
 	if run == null:
 		return ""
-	return "Sea %d of %d (%s)   Step %d of %d\nGold %d   Hull %d/%d   Sails %d/%d\nHands %d/%d   Specialists %d\nMorale %d (%s)   Rum %d%s\nCompany hunt %d%%%s" % [
+	return "Sea %d of %d (%s)   Day %d\nGold %d   Hull %d/%d   Sails %d/%d\nHands %d/%d   Specialists %d\nMorale %d (%s)   Rum %d%s\nCompany hunt %d%%%s" % [
 		run.sea_number, RunState.SEAS_PER_RUN, Voyage.sea_name(run),
-		run.node_index + 1, RunState.NODES_PER_SEA,
+		run.days,
 		run.gold, run.hull, run.max_hull, run.sails, run.max_sails,
 		run.hands, run.max_hands, run.crew.size(),
 		run.morale, Morale.mood(run.morale), run.rum, "  (cask dry!)" if run.rum <= 0 else "",

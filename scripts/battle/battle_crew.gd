@@ -39,6 +39,7 @@ func station() -> String:
 func buff(stat: String, default := 1.0) -> float:
 	var buffs: Dictionary = Data.get_item("crew", role).get("buffs", {})
 	var value := float(buffs.get(stat, default))
+	value = default + (value - default) * Hub.buff_scale(level)  # seasoned and veteran hands are better at it
 	if not alive:
 		return default
 	if is_wounded():

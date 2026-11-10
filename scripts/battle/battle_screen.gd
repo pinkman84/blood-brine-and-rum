@@ -123,6 +123,7 @@ var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
 var _start_hands := 0
 var _intro_note := ""  # shown once the battle screen is built
+var _elite_fight := false  # the sea's exit fight: richer plunder
 var _can_parley := false  # an ordinary encounter: she might hail us first (see Reputation)
 var _cheat_button: Button
 static var _cheats_on := false  # testing: stays on for the rest of the session once pressed
@@ -422,6 +423,7 @@ func _pick_enemy(sea: int) -> Dictionary:
 	var run: RunState = GameState.run
 	var elite := run.elite_pending
 	run.elite_pending = false
+	_elite_fight = elite
 	var hunter := run.hunter_pending or (not elite and randf() < Voyage.hunter_chance(run))
 	run.hunter_pending = false
 	var picked: Dictionary = {}
@@ -560,6 +562,14 @@ func _end_hail(treachery: bool) -> void:
 func _rep_line() -> String:
 	var lines := Reputation.on_defeat(GameState.run, str(_enemy_data.get("faction", "")))
 	return "\nWord spreads: %s." % ", ".join(lines) if not lines.is_empty() else ""
+
+
+## Taking a ship as a prize can finish a quest (see Hub.check_quests).
+func _quest_lines(captured: bool) -> String:
+	if not captured or enemy.is_static:
+		return ""
+	var lines := Hub.check_quests(GameState.run, {"type": "capture", "faction": str(_enemy_data.get("faction", ""))})
+	return "\n" + "\n".join(lines) if not lines.is_empty() else ""
 
 
 ## Picks from the candidates by this sea's faction weights (data/seas "factions").
@@ -783,8 +793,10 @@ func _tick_melee(delta: float) -> void:
 	var att := _boarding.attacker
 	var att_crew := player_crew if att == player else enemy_crew
 	var def_crew := enemy_crew if att == player else player_crew
-	var event := _boarding.tick_melee(delta, _crew_buff(att_crew, "boarding") * att.morale_factor,
-		_crew_buff(def_crew, "boarding") * _boarding.defender.morale_factor)
+	var axes := Perks.mult(GameState.run, "boarding")  # our people fight harder, attacking or defending
+	var event := _boarding.tick_melee(delta,
+		_crew_buff(att_crew, "boarding") * att.morale_factor * (axes if att == player else 1.0),
+		_crew_buff(def_crew, "boarding") * _boarding.defender.morale_factor * (axes if att != player else 1.0))
 	if event == "":
 		return
 	# Boarding masters lead from the front on both sides, and get hurt doing it.
@@ -850,7 +862,7 @@ func _enemy_board_think(delta: float) -> void:
 ## We took her by boarding. Her surviving hands are now our prisoners.
 func _show_boarding_victory(prisoners: int) -> void:
 	var run: RunState = GameState.run
-	var gold := roundi(int(_enemy_data.get("gold_reward", 10)) * STRUCK_GOLD)
+	var gold := roundi(int(_enemy_data.get("gold_reward", 10)) * STRUCK_GOLD * Perks.mult(run, "gold"))
 	var patched := _write_back(true)
 	run.gold += gold
 	run.battles_won += 1
@@ -861,9 +873,10 @@ func _show_boarding_victory(prisoners: int) -> void:
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
 	text += _rep_line()
+	text += _quest_lines(true)
 	text += _morale_line(morale)
 	if prisoners <= 0:
-		_show_result(text, "Return to the map", GameState.finish_node)
+		_show_result(text, "Share out the plunder", _to_plunder)
 		return
 	text += "\n%d of her crew have surrendered. What's to be done with them?" % prisoners
 	_offer_prisoners(text, prisoners, "Set them adrift")
@@ -888,7 +901,12 @@ func _settle_prisoners(mode: String, count: int) -> void:
 			Morale.change(run, Morale.PRESSED_PRISONERS)  # the crew don't trust them
 		"ransom":
 			run.prisoners += count
-	GameState.finish_node()
+	_to_plunder()
+
+
+## A ship is beaten: on to choosing what we take from her (the plunder screen).
+func _to_plunder() -> void:
+	GameState.take_plunder("elite" if _elite_fight else "battle")
 
 
 # --- Enemy captain and crew ------------------------------------------------
@@ -1110,7 +1128,7 @@ func _port_name() -> String:
 
 func _show_victory(captured: bool) -> void:
 	var run: RunState = GameState.run
-	var gold := int(_enemy_data.get("gold_reward", 10))
+	var gold := roundi(int(_enemy_data.get("gold_reward", 10)) * Perks.mult(run, "gold"))
 	if captured:
 		gold = roundi(gold * STRUCK_GOLD)
 	var patched := _write_back(true)
@@ -1140,6 +1158,7 @@ func _show_victory(captured: bool) -> void:
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
 	text += _rep_line()
+	text += _quest_lines(captured)
 	text += _morale_line(morale)
 	if enemy.is_static:
 		text += "\n%s is yours. The townsfolk wait to see what you'll do." % _port_name()
@@ -1149,7 +1168,7 @@ func _show_victory(captured: bool) -> void:
 	if not captured:
 		survivors = roundi(enemy.hands * SURVIVOR_SHARE * randf_range(0.7, 1.3))
 	if survivors <= 0:
-		_show_result(text, "Return to the map", GameState.finish_node)
+		_show_result(text, "Share out the plunder", _to_plunder)
 		return
 	text += "\n%d of her crew are clinging to the wreckage. What's to be done with them?" % survivors
 	_offer_prisoners(text, survivors, "Leave them to the sea")
@@ -1158,6 +1177,9 @@ func _show_victory(captured: bool) -> void:
 func _go_ashore() -> void:
 	var run: RunState = GameState.run
 	run.port_taken = true
+	var here := int(run.map.get("current", -1))
+	if here >= 0:
+		run.map["nodes"][here]["taken"] = true  # she stays ours if we sail back this way
 	SaveSystem.save_run(run)
 	GameState.change_screen(GameState.Screen.SHOP)
 
@@ -1203,6 +1225,9 @@ func _write_back(won: bool) -> Dictionary:
 		mend = HANDS_MEND + survivors.filter(func(c: BattleCrew) -> bool: return c.role == "bosun").size() * BOSUN_MEND
 		var has_surgeon := survivors.any(func(c: BattleCrew) -> bool: return c.role == "surgeon")
 		recovery = HEAL_AFTER_BATTLE + (SURGEON_AFTER_BATTLE if has_surgeon else 0)
+		repair += roundi(Perks.add(run, "repair"))
+		mend += roundi(Perks.add(run, "mend"))
+		recovery += roundi(Perks.add(run, "heal"))
 	var kept: Array[Dictionary] = []
 	for c: BattleCrew in survivors:
 		c.heal(recovery)

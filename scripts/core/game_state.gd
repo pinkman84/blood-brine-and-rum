@@ -5,7 +5,7 @@ extends Node
 ## into here (start a run, finish a node, end the run) and never load each
 ## other directly.
 
-enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN, SHIP_SELECT }
+enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN, SHIP_SELECT, LOOT, OUTPOST, HUB }
 
 const SCREEN_SCENES := {
 	Screen.MENU: "res://scenes/ui/menu.tscn",
@@ -17,6 +17,9 @@ const SCREEN_SCENES := {
 	Screen.SEA_CHART: "res://scenes/map/sea_chart.tscn",
 	Screen.HAVEN: "res://scenes/ui/haven.tscn",
 	Screen.SHIP_SELECT: "res://scenes/ui/ship_select.tscn",
+	Screen.LOOT: "res://scenes/ui/loot.tscn",
+	Screen.OUTPOST: "res://scenes/ui/outpost.tscn",
+	Screen.HUB: "res://scenes/ui/hub.tscn",
 }
 
 const STARTING_SHIP := "sloop"
@@ -56,6 +59,8 @@ func continue_run() -> void:
 		change_screen(Screen.MENU)
 	elif run.route.size() < run.sea_number:
 		change_screen(Screen.SEA_CHART)  # we quit while choosing the next sea
+	elif run.loot_pending != "":
+		change_screen(Screen.LOOT)  # we quit while sharing out the plunder
 	elif run.forced_event != "":
 		change_screen(Screen.EVENT)  # quitting doesn't get you out of a mutiny
 	else:
@@ -65,18 +70,25 @@ func continue_run() -> void:
 ## Call when the player finishes a node. Moves on, saves, and returns to the map.
 func finish_node() -> void:
 	run.port_taken = false
+	run.loot_pending = ""
+	Morale.change(run, roundi(Perks.add(run, "morale_per_node")))
 	# A day's sailing: the crew drinks its rum ration, or grumbles without one.
 	if run.rum > 0:
 		run.rum -= 1
 	else:
 		Morale.change(run, Morale.NO_RUM)
 	# Steps through the sea follow the map: we're one past the node just finished.
+	# node_index is how far across the sea we are (the node's column), for
+	# Voyage.progress. The sea ends when we've dealt with its exit.
 	var here := int(run.map.get("current", -1))
+	var at_exit := false
 	if here >= 0:
-		run.node_index = int(run.map["nodes"][here]["layer"]) + 1
+		var node: Dictionary = run.map["nodes"][here]
+		run.node_index = mini(int(node["layer"]) + 1, RunState.NODES_PER_SEA - 1)
+		at_exit = str(node["type"]) == "elite"
 	else:
 		run.node_index += 1
-	if run.node_index >= RunState.NODES_PER_SEA:
+	if at_exit:
 		run.node_index = 0
 		run.sea_number += 1
 		run.map = {}  # the next sea's map is drawn when we first see it
@@ -85,6 +97,10 @@ func finish_node() -> void:
 			return
 		if run.sea_number == RunState.SEAS_PER_RUN:
 			Voyage.enter_sea(run, Voyage.FINAL_SEA)  # the last leg is always the Company's home waters
+			var earned := Hub.mark("reached_final_sea")
+			run.last_note = "The last sea. The Company's home waters."
+			if not earned.is_empty():
+				run.last_note += " Word of how far you've come reaches home: the %s will be waiting there." % ", ".join(earned)
 		else:
 			SaveSystem.save_run(run)
 			change_screen(Screen.SEA_CHART)  # choose the next sea
@@ -98,6 +114,13 @@ func finish_node() -> void:
 		return
 	SaveSystem.save_run(run)
 	change_screen(Screen.SEA_MAP)
+
+
+## A battle is won: choose the plunder, then sail on. `kind` is "battle" or "elite".
+func take_plunder(kind: String) -> void:
+	run.loot_pending = kind
+	SaveSystem.save_run(run)
+	change_screen(Screen.LOOT)
 
 
 ## Back to the map after something that happened between nodes (a mutiny).
@@ -116,7 +139,7 @@ func end_run(won: bool) -> void:
 	}
 	SaveSystem.add_meta("doubloons", doubloons)
 	if won:
-		SaveSystem.add_meta("victories", 1)
+		last_run_summary["unlocked"] = Hub.mark("victories")
 	SaveSystem.save_meta()
 	SaveSystem.delete_run()
 	run = null

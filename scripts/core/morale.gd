@@ -14,7 +14,7 @@ const LOW := 40
 const MUTINY := 20
 const MUTINY_GAP := 3  # days between mutinies
 
-const START_RUM := 10
+const START_RUM := 14
 const NO_RUM := -6  # each node sailed with an empty rum cask
 
 # Battle results
@@ -56,6 +56,8 @@ static func mood(morale: int) -> String:
 ## Applies a change to the run's morale. Returns the change actually made.
 static func change(run: RunState, amount: int) -> int:
 	var before := run.morale
+	if amount < 0:
+		amount = mini(-1, roundi(amount * Perks.mult(run, "morale_loss")))
 	run.morale = clampi(run.morale + amount, 0, 100)
 	return run.morale - before
 
