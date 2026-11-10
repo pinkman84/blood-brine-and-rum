@@ -131,7 +131,12 @@
             },
             "chance": 2
           }
-        ]
+        ],
+        "requires": {
+          "rep_min": {
+            "navy": -59
+          }
+        }
       },
       {
         "text": "Bribe the lieutenant (25 gold)",
@@ -140,7 +145,10 @@
             "text": "Gold changes hands. You were never here.",
             "effects": {
               "gold": -25,
-              "hunt": -10
+              "hunt": -10,
+              "rep": {
+                "navy": 3
+              }
             }
           }
         ],
@@ -155,7 +163,10 @@
             "text": "No sense waiting for them to make up their minds.",
             "effects": {
               "battle": "navy_cutter",
-              "morale": 3
+              "morale": 3,
+              "rep": {
+                "navy": -5
+              }
             }
           }
         ]
@@ -315,7 +326,10 @@
             "text": "Fine Barbados rum, mostly.",
             "effects": {
               "gold": -15,
-              "rum": 8
+              "rum": 8,
+              "rep": {
+                "rivals": 3
+              }
             }
           }
         ],
@@ -331,14 +345,20 @@
             "effects": {
               "rum": 8,
               "morale": 3,
-              "hunt": 3
+              "hunt": 3,
+              "rep": {
+                "rivals": -6
+              }
             },
             "chance": 3
           },
           {
             "text": "They'd rather fight. So be it.",
             "effects": {
-              "battle": "rival_sloop"
+              "battle": "rival_sloop",
+              "rep": {
+                "rivals": -6
+              }
             },
             "chance": 1
           }
@@ -437,7 +457,11 @@
             "text": "You take the tender without a shot. The freed men join you.",
             "effects": {
               "hands": 12,
-              "morale": 4
+              "morale": 4,
+              "rep": {
+                "slavers": -8,
+                "brotherhood": 4
+              }
             },
             "chance": 2
           },
@@ -445,7 +469,11 @@
             "text": "The brig sees you and slips her cable. You free the tender's few.",
             "effects": {
               "hands": 5,
-              "morale": 2
+              "morale": 2,
+              "rep": {
+                "slavers": -8,
+                "brotherhood": 4
+              }
             },
             "chance": 1
           }
@@ -577,7 +605,10 @@
             "text": "For the Brotherhood!",
             "effects": {
               "battle": "navy_cutter",
-              "morale": 3
+              "morale": 3,
+              "rep": {
+                "brotherhood": 12
+              }
             }
           }
         ]
@@ -591,7 +622,10 @@
               "ammo": {
                 "chain_shot": -3
               },
-              "gold": 20
+              "gold": 20,
+              "rep": {
+                "brotherhood": 5
+              }
             }
           }
         ],
@@ -606,7 +640,11 @@
         "outcomes": [
           {
             "text": "He sails off, disappointed.",
-            "effects": {}
+            "effects": {
+              "rep": {
+                "brotherhood": -3
+              }
+            }
           }
         ]
       }
@@ -725,7 +763,11 @@
             "text": "Good seamen, glad of the chance.",
             "effects": {
               "hands": 8,
-              "hunt": 4
+              "hunt": 4,
+              "rep": {
+                "navy": -5,
+                "brotherhood": 3
+              }
             }
           }
         ]
@@ -738,7 +780,11 @@
             "effects": {
               "gold": 30,
               "morale": -8,
-              "hunt": -10
+              "hunt": -10,
+              "rep": {
+                "navy": 8,
+                "brotherhood": -8
+              }
             }
           }
         ]
@@ -1288,7 +1334,10 @@
             "text": "Grateful and hard-working. For now.",
             "effects": {
               "hands": 12,
-              "morale": -2
+              "morale": -2,
+              "rep": {
+                "brotherhood": 3
+              }
             }
           },
           {
@@ -1296,7 +1345,10 @@
             "text": "Grateful, but they bring their grievances with them.",
             "effects": {
               "hands": 12,
-              "morale": -8
+              "morale": -8,
+              "rep": {
+                "brotherhood": 3
+              }
             }
           }
         ]
@@ -1530,6 +1582,291 @@
             "effects": {
               "gold": -5,
               "morale": 5
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kings_pardon",
+    "title": "The King's Pardon",
+    "min_sea": 2,
+    "text": "A Navy frigate flies a white flag and sends a boat. The lieutenant reads from a scroll: any pirate who surrenders to the Crown's mercy will be pardoned. He looks at you meaningfully.",
+    "choices": [
+      {
+        "text": "Accept the pardon and sail as a privateer",
+        "requires": {
+          "rep_min": {
+            "navy": -14
+          }
+        },
+        "outcomes": [
+          {
+            "text": "You swear the oath. The Navy will look the other way and the Company loses your file, but the Brotherhood will hear of it.",
+            "effects": {
+              "rep": {
+                "navy": 30,
+                "brotherhood": -30
+              },
+              "hunt": -30,
+              "morale": -6
+            }
+          }
+        ]
+      },
+      {
+        "text": "Take the pardon and keep it in your coat, just in case",
+        "requires": {
+          "rep_min": {
+            "navy": -40
+          }
+        },
+        "outcomes": [
+          {
+            "text": "A paper in your pocket and a promise you don't mean. The lieutenant seems satisfied.",
+            "effects": {
+              "rep": {
+                "navy": 12,
+                "brotherhood": -5
+              }
+            }
+          }
+        ]
+      },
+      {
+        "text": "Tear it up in front of the crew",
+        "outcomes": [
+          {
+            "text": "The crew roar. The lieutenant rows back, red in the face.",
+            "effects": {
+              "rep": {
+                "navy": -15,
+                "brotherhood": 10
+              },
+              "morale": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "company_clerk",
+    "title": "A clerk with a price",
+    "seas": [
+      "atlantic",
+      "cape_of_storms",
+      "indian_ocean",
+      "spice_islands",
+      "south_china_sea"
+    ],
+    "text": "A Company clerk, rowing out in a hired boat. For a consideration, he says, files can be lost and hunters sent the wrong way.",
+    "choices": [
+      {
+        "text": "Pay him to lose your file (40 gold)",
+        "requires": {
+          "gold": 40
+        },
+        "outcomes": [
+          {
+            "text": "A month's wages for him. Your file goes missing and the hunters lose your trail for a while. The Company itself will never forget.",
+            "effects": {
+              "gold": -40,
+              "hunt": -25
+            }
+          }
+        ]
+      },
+      {
+        "text": "Pay him to send the hunters the wrong way (25 gold)",
+        "requires": {
+          "gold": 25
+        },
+        "outcomes": [
+          {
+            "text": "He scribbles a false sighting. The hunt cools.",
+            "effects": {
+              "gold": -25,
+              "hunt": -15
+            }
+          }
+        ]
+      },
+      {
+        "text": "Take his purse and send him back wet",
+        "outcomes": [
+          {
+            "text": "He'll make a report, and it won't be kind.",
+            "effects": {
+              "gold": 20,
+              "hunt": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rival_duel",
+    "title": "A challenge",
+    "text": "A rival captain's boat comes alongside under a white flag. Her captain has called you a coward in every tavern from here to Tortuga, and will say it to your face: first blood, cutlasses, on the beach at dawn.",
+    "choices": [
+      {
+        "text": "Accept the duel",
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "Steel rings on the beach. You draw first blood. The rivals pay up, and they'll speak your name with respect.",
+            "effects": {
+              "gold": 30,
+              "rep": {
+                "rivals": 15
+              },
+              "morale": 10
+            }
+          },
+          {
+            "chance": 1,
+            "text": "You lose, and badly. The crew carry you back to the boat.",
+            "effects": {
+              "gold": -20,
+              "rep": {
+                "rivals": 5
+              },
+              "morale": -8,
+              "wound": 40
+            }
+          }
+        ]
+      },
+      {
+        "text": "Send your boarding master in your place",
+        "requires": {
+          "role": "boarding_master"
+        },
+        "outcomes": [
+          {
+            "chance": 3,
+            "text": "Your boarding master makes short work of it. Laughter and coin.",
+            "effects": {
+              "gold": 30,
+              "rep": {
+                "rivals": 10
+              },
+              "morale": 6
+            }
+          },
+          {
+            "chance": 1,
+            "text": "A lucky cut, and your boarding master goes down.",
+            "effects": {
+              "wound": 60,
+              "rep": {
+                "rivals": 5
+              },
+              "morale": -4
+            }
+          }
+        ]
+      },
+      {
+        "text": "Decline. Real captains have better things to do",
+        "outcomes": [
+          {
+            "text": "The insults follow you out of the bay.",
+            "effects": {
+              "morale": -6,
+              "rep": {
+                "rivals": -10
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "brotherhood_council",
+    "title": "The Brotherhood votes",
+    "text": "The captains of the Brotherhood have gathered on a beach to vote, as the code demands: on a raid against the Company, on a captain accused of breaking the code, and on who will lead.",
+    "choices": [
+      {
+        "text": "Stand for commodore of the raid",
+        "requires": {
+          "rep_min": {
+            "brotherhood": 15
+          }
+        },
+        "outcomes": [
+          {
+            "text": "They vote you in by acclamation. A captain of the Brotherhood sends you his best hand.",
+            "effects": {
+              "rep": {
+                "brotherhood": 15
+              },
+              "morale": 8,
+              "join": "random"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Pay your dues to the council (25 gold)",
+        "requires": {
+          "gold": 25
+        },
+        "outcomes": [
+          {
+            "text": "Coin in the common chest. They'll remember it.",
+            "effects": {
+              "gold": -25,
+              "rep": {
+                "brotherhood": 12
+              }
+            }
+          }
+        ]
+      },
+      {
+        "text": "Answer the charges against you",
+        "requires": {
+          "rep_max": {
+            "brotherhood": 14
+          }
+        },
+        "outcomes": [
+          {
+            "chance": 2,
+            "text": "You speak well. They fine you, but you keep your ship and your name.",
+            "effects": {
+              "gold": -20,
+              "rep": {
+                "brotherhood": 15
+              }
+            }
+          },
+          {
+            "chance": 1,
+            "text": "They don't believe a word. You're cast out of the council.",
+            "effects": {
+              "rep": {
+                "brotherhood": -10
+              },
+              "morale": -6
+            }
+          }
+        ]
+      },
+      {
+        "text": "Walk out on them",
+        "outcomes": [
+          {
+            "text": "Some captains spit as you pass.",
+            "effects": {
+              "rep": {
+                "brotherhood": -8
+              }
             }
           }
         ]

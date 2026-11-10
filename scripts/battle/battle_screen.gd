@@ -123,6 +123,7 @@ var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
 var _start_hands := 0
 var _intro_note := ""  # shown once the battle screen is built
+var _can_parley := false  # an ordinary encounter: she might hail us first (see Reputation)
 var _cheat_button: Button
 static var _cheats_on := false  # testing: stays on for the rest of the session once pressed
 
@@ -155,6 +156,7 @@ func _ready() -> void:
 	_refresh_ui()
 	if _intro_note != "":
 		_log(_intro_note)
+	_hail()
 
 
 func _exit_tree() -> void:
@@ -446,12 +448,16 @@ func _pick_enemy(sea: int) -> Dictionary:
 		if options.is_empty():
 			options = all
 		picked = _weighted_by_sea(options, run)
+		_can_parley = not elite
 	var boosted := picked.duplicate(true)
 	var scale := Voyage.scale(run)
 	boosted["max_hull"] = roundi(int(picked.get("max_hull", 20)) * scale)
 	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * scale)
 	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + Voyage.SEA_ACCURACY * (sea - 1)
 	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * (1.0 + Voyage.SEA_GOLD * (sea - 1)))
+	if not bool(picked.get("special", false)):
+		# An ordinary ship: crewed and officered for how far we've come. A veteran is fully fitted out.
+		Voyage.fit_out(boosted, 1.0 if elite else Voyage.progress(run))
 	if elite and not captain:
 		# No named captain left for these waters: a veteran guards the way out.
 		boosted["name"] = "Veteran " + str(picked.get("name", "ship")).to_lower()
@@ -493,18 +499,86 @@ func _port_fort(base: Dictionary, owner: String) -> Dictionary:
 	return fort
 
 
+# --- Hailing: reputation before the first shot -------------------------------
+
+## Friends salute and let us pass; wary captains can be paid to sheer off;
+## anyone else fights. The battle waits until we decide.
+func _hail() -> void:
+	var run: RunState = GameState.run
+	var faction := str(_enemy_data.get("faction", ""))
+	var value := Reputation.of(run, faction)
+	var who := Reputation.short_name(faction)
+	var stance := Reputation.stance(run, faction) if _can_parley else "fight"
+	if stance == "fight":
+		if value <= Reputation.HATED and faction != "":
+			_log("%s know your colours. They'll give no quarter." % who)
+		return
+	_over = true  # hold everything while we talk
+	if stance == "salute":
+		_show_choices("The %s dips her colours in salute. %s count you a friend (%+d)." % [enemy.display_name, who, value], [
+			["Return the salute and sail on (%s %+d)" % [who, Reputation.PASSED_IN_PEACE], _pass_in_peace],
+			["Attack her anyway (treachery: %s %+d)" % [who, Reputation.TREACHERY], _end_hail.bind(true)],
+		])
+	else:
+		var cost := Reputation.bribe_cost(run)
+		var options: Array = []
+		if run.gold >= cost:
+			options.append(["Pay her captain %d gold to sheer off" % cost, _pay_off_captain.bind(cost)])
+		options.append(["Clear for action!", _end_hail.bind(false)])
+		_show_choices("The %s holds off with her guns run out, but silent. %s are wary of you (%+d); her captain might be persuaded to look the other way." % [
+			enemy.display_name, who, value], options)
+
+
+func _pass_in_peace() -> void:
+	var run: RunState = GameState.run
+	Reputation.change(run, str(_enemy_data.get("faction", "")), Reputation.PASSED_IN_PEACE)
+	run.last_note = "The %s let us pass in peace." % enemy.display_name
+	GameState.finish_node()
+
+
+func _pay_off_captain(cost: int) -> void:
+	var run: RunState = GameState.run
+	run.gold -= cost
+	run.last_note = "Gold changed hands, and the %s sheered off." % enemy.display_name
+	GameState.finish_node()
+
+
+func _end_hail(treachery: bool) -> void:
+	for b in _choice_buttons:
+		b.queue_free()
+	_choice_buttons.clear()
+	_result_box.visible = false
+	_result_button.visible = true
+	_over = false
+	if treachery:
+		var line := Reputation.change(GameState.run, str(_enemy_data.get("faction", "")), Reputation.TREACHERY)
+		_log("Treachery! They won't forget it (%s)." % line)
+	_refresh_ui()
+
+
+## A victory's news travels: the loser's faction and its enemies remember it.
+func _rep_line() -> String:
+	var lines := Reputation.on_defeat(GameState.run, str(_enemy_data.get("faction", "")))
+	return "\nWord spreads: %s." % ", ".join(lines) if not lines.is_empty() else ""
+
+
 ## Picks from the candidates by this sea's faction weights (data/seas "factions").
 func _weighted_by_sea(options: Array, run: RunState) -> Dictionary:
-	var weights: Dictionary = Voyage.sea(run).get("factions", {})
 	var total := 0.0
 	for e: Dictionary in options:
-		total += float(weights.get(e.get("faction", ""), 0.5))
+		total += _encounter_weight(e, run)
 	var roll := randf() * total
 	for e: Dictionary in options:
-		roll -= float(weights.get(e.get("faction", ""), 0.5))
+		roll -= _encounter_weight(e, run)
 		if roll <= 0.0:
 			return e
 	return options.back()
+
+
+## The sea decides the faction, how far we've come decides light, medium or heavy.
+func _encounter_weight(e: Dictionary, run: RunState) -> float:
+	var factions: Dictionary = Voyage.sea(run).get("factions", {})
+	return float(factions.get(e.get("faction", ""), 0.5)) * Voyage.class_weight(run, str(e.get("class", "")))
 
 
 # --- Coming about -----------------------------------------------------------
@@ -786,6 +860,7 @@ func _show_boarding_victory(prisoners: int) -> void:
 	text = _free_captives(text)
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
+	text += _rep_line()
 	text += _morale_line(morale)
 	if prisoners <= 0:
 		_show_result(text, "Return to the map", GameState.finish_node)
@@ -1064,6 +1139,7 @@ func _show_victory(captured: bool) -> void:
 		text += "\nThe captives chained below went down with her."
 	if not _fallen.is_empty():
 		text += "\nLost: " + ", ".join(_fallen) + "."
+	text += _rep_line()
 	text += _morale_line(morale)
 	if enemy.is_static:
 		text += "\n%s is yours. The townsfolk wait to see what you'll do." % _port_name()
@@ -1290,6 +1366,7 @@ func _build_ui() -> void:
 	_enemy_escape_bar = _add_bar(right, Color("5dade2"))
 	for bar in [_enemy_hull_bar, _enemy_sails_bar, _enemy_reload_bar, _enemy_reload_other, _enemy_escape_bar]:
 		(bar as ProgressBar).size_flags_horizontal = Control.SIZE_SHRINK_END  # hug the right edge
+	_enemy_sails_bar.visible = not enemy.is_static  # a fort has no sails
 
 	# Left: the crew roster. Click a name to select, then click a room.
 	var middle := HBoxContainer.new()
@@ -1598,6 +1675,8 @@ func _status_text(ship: BattleShip) -> String:
 	var trouble := DamageControl.alerts(ship)
 	if trouble != "":
 		guns += "  " + trouble.to_upper()
+	if ship.is_static:  # a fort: no sails, and it can't dodge
+		return "Walls %d/%d  HANDS %d/%d\n%s" % [ship.hull, ship.max_hull, ship.hands, ship.max_hands, guns]
 	return "Hull %d/%d  Sails %d/%d  HANDS %d/%d\nDodge %d%%  %s" % [
 		ship.hull, ship.max_hull, ship.sails, ship.max_sails, ship.hands, ship.max_hands,
 		int(ship.evasion() * 100.0), guns]

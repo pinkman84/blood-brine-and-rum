@@ -3,7 +3,7 @@
     "id": "company",
     "name": "The Honourable Trading Company",
     "short_name": "the Company",
-    "description": "Merchant empire with its own navy. Main villain and final boss.",
+    "description": "Merchant empire with its own navy. They know you carry the Aeolus Horn and will stop at nothing to take it. Main villain and final boss.",
     "starting_reputation": -50,
     "always_hostile": true,
     "ai": {
@@ -32,7 +32,12 @@
       "raid_morale": 6,
       "raid_hunt": 20,
       "captives": 0
-    }
+    },
+    "on_defeat": {
+      "brotherhood": 4
+    },
+    "rep_ceiling": -15,
+    "fixed": true
   },
   {
     "id": "navy",
@@ -67,6 +72,11 @@
       "raid_morale": 4,
       "raid_hunt": 5,
       "captives": 0
+    },
+    "on_defeat": {
+      "navy": -10,
+      "brotherhood": 4,
+      "rivals": 2
     }
   },
   {
@@ -102,6 +112,10 @@
       "raid_morale": -15,
       "raid_hunt": 0,
       "captives": 0
+    },
+    "on_defeat": {
+      "brotherhood": -20,
+      "navy": 5
     }
   },
   {
@@ -137,6 +151,10 @@
       "raid_morale": 3,
       "raid_hunt": 0,
       "captives": 0
+    },
+    "on_defeat": {
+      "rivals": -8,
+      "navy": 2
     }
   },
   {
@@ -172,6 +190,11 @@
       "raid_morale": 10,
       "raid_hunt": 0,
       "captives": 25
+    },
+    "on_defeat": {
+      "slavers": -10,
+      "brotherhood": 4,
+      "navy": 3
     }
   }
 ]

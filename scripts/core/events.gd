@@ -13,6 +13,7 @@ extends RefCounted
 ##   role: a specialist role id that must be aboard (e.g. "carpenter")
 ##   ammo: { ammo id: rounds }
 ##   prisoners: number
+##   rep_min, rep_max: { faction id: value } (see Reputation)
 ##
 ## effects (all optional, numbers can be negative):
 ##   gold, hull, sails, hands, morale, rum, hunt, prisoners: numbers
@@ -20,6 +21,7 @@ extends RefCounted
 ##   wound: health a random specialist loses (they can die)
 ##   join: a specialist role id, or "random", who joins if there's a free slot
 ##   battle: "random" (this sea's mix) or an enemy id; the node becomes a fight
+##   rep: { faction id: change }
 ##   days: time lost; each day drinks a rum ration and lets the Company hunt grow
 ##   end_run: true; the voyage is over (the event screen ends the run)
 
@@ -83,6 +85,14 @@ static func unmet(run: RunState, requires: Dictionary) -> String:
 		var role := str(requires["role"])
 		if not run.crew.any(func(c: Dictionary) -> bool: return c.get("role") == role):
 			return "needs a %s" % str(Data.get_item("crew", role).get("name", role)).to_lower()
+	var rep_min: Dictionary = requires.get("rep_min", {})
+	for f: String in rep_min:
+		if Reputation.of(run, f) < int(rep_min[f]):
+			return "%s won't trust you" % Reputation.short_name(f)
+	var rep_max: Dictionary = requires.get("rep_max", {})
+	for f: String in rep_max:
+		if Reputation.of(run, f) > int(rep_max[f]):
+			return "%s think too well of you" % Reputation.short_name(f)
 	var ammo: Dictionary = requires.get("ammo", {})
 	for id: String in ammo:
 		if int(run.ammo.get(id, 0)) < int(ammo[id]):
@@ -160,6 +170,7 @@ static func apply(run: RunState, effects: Dictionary) -> Array[String]:
 		var have := int(run.ammo.get(id, 0))
 		run.ammo[id] = maxi(0, have + int(ammo[id]))
 		lines.append("%+d %s" % [int(run.ammo[id]) - have, str(Data.get_item("ammo", id).get("name", id)).to_lower()])
+	lines.append_array(Reputation.apply(run, effects.get("rep", {})))
 	if effects.has("wound"):
 		lines.append(_wound(run, int(effects["wound"])))
 	if effects.has("join"):

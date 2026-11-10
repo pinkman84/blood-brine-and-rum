@@ -38,6 +38,7 @@ var port_taken := false  # we beat this sea's port fort and are ashore in the to
 var forced_event := ""  # an event that happens before we sail on (a mutiny)
 var last_mutiny := -99  # the day the crew last rose; they don't rise again for a while
 var met_captains: Array = []  # elite captains already fought this run
+var reputation: Dictionary = {}  # faction id -> -100..100 (see Reputation)
 var battles_won: int = 0
 
 
@@ -65,6 +66,7 @@ static func new_run(ship: Dictionary) -> RunState:
 	var start_ammo: Dictionary = ship.get("starting_ammo", {})
 	for ammo_id: Variant in start_ammo:
 		run.ammo[str(ammo_id)] = int(start_ammo[ammo_id])
+	Reputation.start(run, ship)
 	return run
 
 
@@ -100,6 +102,7 @@ func to_dict() -> Dictionary:
 		"forced_event": forced_event,
 		"last_mutiny": last_mutiny,
 		"met_captains": met_captains,
+		"reputation": reputation,
 		"battles_won": battles_won,
 	}
 
@@ -147,6 +150,12 @@ static func from_dict(data: Dictionary) -> RunState:
 	run.forced_event = str(data.get("forced_event", ""))
 	run.last_mutiny = int(data.get("last_mutiny", -99))
 	run.met_captains = data.get("met_captains", [])
+	var rep: Dictionary = data.get("reputation", {})
+	if rep.is_empty():  # saves from before reputation
+		Reputation.start(run, Data.get_item("ships", run.ship_id))
+	else:
+		for f: Variant in rep:
+			run.reputation[str(f)] = int(rep[f])
 	if run.sea_id == "":  # saves from before the sea chart
 		run.sea_id = Voyage.START_SEA
 		run.route = [Voyage.START_SEA]

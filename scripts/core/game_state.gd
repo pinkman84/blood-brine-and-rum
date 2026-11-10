@@ -5,7 +5,7 @@ extends Node
 ## into here (start a run, finish a node, end the run) and never load each
 ## other directly.
 
-enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN }
+enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN, SHIP_SELECT }
 
 const SCREEN_SCENES := {
 	Screen.MENU: "res://scenes/ui/menu.tscn",
@@ -16,6 +16,7 @@ const SCREEN_SCENES := {
 	Screen.GAME_OVER: "res://scenes/ui/game_over.tscn",
 	Screen.SEA_CHART: "res://scenes/map/sea_chart.tscn",
 	Screen.HAVEN: "res://scenes/ui/haven.tscn",
+	Screen.SHIP_SELECT: "res://scenes/ui/ship_select.tscn",
 }
 
 const STARTING_SHIP := "sloop"
@@ -38,9 +39,11 @@ func screen_name(screen: Screen) -> String:
 	return Screen.keys()[screen]
 
 
-func start_new_run() -> void:
-	run = RunState.new_run(Data.get_item("ships", STARTING_SHIP))
+## The ship sets your stats and how each faction greets you (see Reputation).
+func start_new_run(ship_id := STARTING_SHIP) -> void:
+	run = RunState.new_run(Data.get_item("ships", ship_id))
 	Voyage.enter_sea(run, Voyage.START_SEA)
+	run.last_note = "You sound the Aeolus Horn and the wind swings to your will. The Company will come for it."
 	SaveSystem.add_meta("voyages", 1)
 	SaveSystem.save_meta()
 	SaveSystem.save_run(run)

@@ -60,7 +60,7 @@ static func on_hit(ship: BattleShip, room: Dictionary, ammo_id: String) -> void:
 	fire_chance += float(Data.get_item("ammo", ammo_id).get("fire_chance", 0.0))
 	if randf() < fire_chance:
 		ignite(state)
-	if LEAK_ROOMS.has(room["type"]) and randf() < LEAK_CHANCE:
+	if LEAK_ROOMS.has(room["type"]) and not ship.is_static and randf() < LEAK_CHANCE:  # a fort can't spring a leak
 		state["leak"] = true
 		state["plug"] = 0.0
 
