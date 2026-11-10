@@ -13,6 +13,8 @@ extends ScreenBase
 ##     who's left     supplies and hiring at half price, townsfolk pressed into the crew
 ##     loot           gold, rum and shot, but the market is stripped and the hunt grows
 ## Arriving with low morale, some hands desert (or, in a haven, stay ashore).
+## The owner's opinion of you (Reputation) scales prices, adds a hire when
+## they're friendly, and if they hate you they won't trade at all.
 
 const REFIT_HULL_COST := 2  # gold per point of hull, before the owner's prices
 const REFIT_SAILS_COST := 1  # gold per point of sail
@@ -77,8 +79,10 @@ func _build() -> void:
 		_arrive(run)
 	if _taken:
 		_add_occupied(run)
-	elif bool(_port.get("trade", false)):
+	elif bool(_port.get("trade", false)) and Reputation.will_trade(run, _owner):
 		_add_trade(run)
+	elif bool(_port.get("trade", false)):
+		add_button("They know your name here. Nobody will trade with you.", func() -> void: pass, false)
 	else:
 		add_button("They won't trade with pirates. Only the guns will do here.", func() -> void: pass, false)
 	if not _taken:
@@ -136,11 +140,12 @@ func _add_trade(run: RunState) -> void:
 func refresh() -> void:
 	var run: RunState = GameState.run
 	var lines: Array[String] = []
-	var prices := float(_port.get("prices", 1.0))
+	var prices := float(_port.get("prices", 1.0)) * Reputation.price_factor(run, _owner)
+	lines.append("Standing with %s: %s (%+d)." % [Data.get_item("factions", _owner).get("short_name", _owner), Reputation.tier(Reputation.of(run, _owner)), Reputation.of(run, _owner)])
 	if _taken:
 		lines.append("The fort is ours and %s lies at our mercy. What's left of the town sells at half price, or we take the lot." % _name)
-	elif bool(_port.get("trade", false)):
-		lines.append("Prices here: %s." % ("cheap, among friends" if prices < 1.0 else ("steep for the likes of you" if prices > 1.0 else "fair")))
+	elif bool(_port.get("trade", false)) and Reputation.will_trade(run, _owner):
+		lines.append("Prices here: %s (x%.2f)." % ["cheap, among friends" if prices < 1.0 else ("steep for the likes of you" if prices > 1.0 else "fair"), prices])
 	if _left_ship > 0:
 		var where := "stayed ashore" if bool(_port.get("stay_ashore", false)) else "deserted"
 		lines.append("%d hands %s when we made port." % [_left_ship, where])
@@ -166,6 +171,8 @@ func _arrive(run: RunState) -> void:
 	var hires := int(_port.get("hire_offers", 0))
 	if _taken:
 		hires = maxi(1, hires)  # someone in a beaten town will sign on
+	elif Reputation.of(run, _owner) >= Reputation.FRIENDLY and Reputation.will_trade(run, _owner):
+		hires += 1  # friends put the word out for you
 	for i in hires:
 		var role: Dictionary = roles.pick_random()
 		_offers.append({"name": str(names.pick_random()), "role": str(role["id"]), "level": 1, "health": 100})
@@ -179,7 +186,7 @@ func _rebuild() -> void:
 
 
 func _price(base: int) -> int:
-	var prices := TAKEN_PRICES if _taken else float(_port.get("prices", 1.0))
+	var prices := TAKEN_PRICES if _taken else float(_port.get("prices", 1.0)) * Reputation.price_factor(GameState.run, _owner)
 	return maxi(1, roundi(base * prices))
 
 
@@ -336,14 +343,16 @@ func _loot() -> void:
 	var taken := Events.apply(run, _loot_effects(run))
 	Voyage.change_hunt(run, LOOT_HUNT)
 	Morale.change(run, LOOT_MORALE)
+	var rep := Reputation.change(run, _owner, Reputation.PORT_LOOTED)
 	_used["loot"] = true
 	_offers.clear()
-	_note = "The town is sacked: " + ", ".join(taken) + ". The crew roar. Word will spread."
+	_note = "The town is sacked: " + ", ".join(taken) + ". The crew roar. Word will spread%s." % ((" (%s)" % rep) if rep != "" else "")
 	_rebuild()
 
 
 func _attack() -> void:
 	var run: RunState = GameState.run
+	Reputation.change(run, _owner, Reputation.PORT_TREACHERY)
 	run.forced_enemy = "shore_fort"
 	run.port_owner = _owner
 	GameState.change_screen(GameState.Screen.BATTLE)

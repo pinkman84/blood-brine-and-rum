@@ -1,8 +1,8 @@
 [
   {
     "id": "sloop",
-    "name": "Sloop",
-    "description": "Small, quick and cheap to run. Every pirate starts somewhere.",
+    "name": "Free rover sloop",
+    "description": "Small, quick and owing nothing to anyone. The Brotherhood knows your kind; everyone else would like to hang you.",
     "max_hull": 30,
     "guns_per_side": 4,
     "starting_gold": 20,
@@ -23,12 +23,13 @@
     "evasion": 0.15,
     "layout": "sloop",
     "max_hands": 100,
-    "specialist_slots": 8
+    "specialist_slots": 8,
+    "start_rep": {}
   },
   {
     "id": "brigantine",
-    "name": "Brigantine",
-    "description": "Heavier hull and more guns, but slower to come about.",
+    "name": "Turncoat brigantine",
+    "description": "A Company brig, taken in a mutiny. Heavier hull and more guns, slow to come about. The Company wants her back, and you dead; the Brotherhood drinks to your health.",
     "max_hull": 40,
     "guns_per_side": 6,
     "starting_gold": 10,
@@ -44,11 +45,48 @@
       "grape_shot": 15,
       "heated_shot": 6
     },
-    "unlocked_at_start": false,
+    "unlocked_at_start": true,
     "max_sails": 24,
     "evasion": 0.08,
     "layout": "brigantine",
     "max_hands": 140,
-    "specialist_slots": 8
+    "specialist_slots": 8,
+    "start_rep": {
+      "company": -25,
+      "brotherhood": 15,
+      "rivals": -10
+    },
+    "flag_color": "111111"
+  },
+  {
+    "id": "privateer",
+    "name": "Privateer cutter",
+    "description": "Sailing under a letter of marque. The Navy calls you an ally and Navy ports will trade; the Brotherhood calls you a traitor. Fast, sharp-eyed, short on guns.",
+    "max_hull": 32,
+    "guns_per_side": 4,
+    "starting_gold": 40,
+    "starting_crew": [
+      "helmsman",
+      "gunner",
+      "boarding_master"
+    ],
+    "starting_ammo": {
+      "round_shot": 40,
+      "chain_shot": 14,
+      "grape_shot": 10,
+      "heated_shot": 2
+    },
+    "unlocked_at_start": true,
+    "flag_color": "2e4a8a",
+    "max_sails": 22,
+    "evasion": 0.17,
+    "layout": "sloop",
+    "max_hands": 100,
+    "specialist_slots": 8,
+    "start_rep": {
+      "navy": 50,
+      "brotherhood": -35,
+      "rivals": -15
+    }
   }
 ]

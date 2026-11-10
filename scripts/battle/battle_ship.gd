@@ -80,7 +80,7 @@ static func from_enemy(data: Dictionary) -> BattleShip:
 	s.base_accuracy = float(data.get("accuracy", 0.5))
 	s.accuracy = s.base_accuracy
 	s.max_hands = int(data.get("max_hands", 100))
-	s.hands = s.max_hands
+	s.hands = maxi(1, roundi(s.max_hands * float(data.get("hands_share", 1.0))))  # under-crewed ships work slower
 	s.unlimited_ammo = true
 	s.flees_at = float(data.get("flees_at", 0.0))
 	s.boards = bool(data.get("boards", false))

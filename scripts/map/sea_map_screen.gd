@@ -71,6 +71,7 @@ func _ready() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color.from_string(str(Voyage.sea(_run).get("color", "")), BG_COLOR))
 	_draw_hunt()
+	_draw_reputation()
 	var nodes: Array = _run.map["nodes"]
 	var font := ThemeDB.fallback_font
 
@@ -169,6 +170,17 @@ func _draw_hunt() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, 158, 10, Color(1, 1, 1, 0.8))
 
 
+## How each faction feels about us, bottom right above the quit button.
+func _draw_reputation() -> void:
+	var font := ThemeDB.fallback_font
+	var y := 258.0
+	for f in Reputation.ORDER:
+		var value := Reputation.of(_run, f)
+		draw_string(font, Vector2(470, y), Reputation.short_name(f), HORIZONTAL_ALIGNMENT_LEFT, 90, 10, Color(1, 1, 1, 0.8))
+		draw_string(font, Vector2(560, y), "%s %+d" % [Reputation.tier(value), value], HORIZONTAL_ALIGNMENT_LEFT, 80, 10, Reputation.tier_color(value))
+		y += 12.0
+
+
 func _pos(node: Dictionary) -> Vector2:
 	var p: Array = node["pos"]
 	return Vector2(float(p[0]), float(p[1]))
@@ -219,5 +231,5 @@ func _refresh_info() -> void:
 			label = "%s, %s: trade, or attack for a richer prize" % [node.get("name", "Port"), kind]
 		text = (label if _is_known(node) else "Unknown waters") + "\n" + text
 	else:
-		text = "Choose your heading: click a glowing node.\n" + text
+		text = "Sound the Aeolus Horn and choose your heading: click a glowing node.\n" + text
 	_info.text = text
