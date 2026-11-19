@@ -71,6 +71,13 @@ func continue_run() -> void:
 func finish_node() -> void:
 	run.port_taken = false
 	run.loot_pending = ""
+	if run.blockade_left > 0:
+		# The blockade is a line of ships: the next one closes before we can draw breath.
+		run.blockade_left -= 1
+		run.forced_enemy = Voyage.BLOCKADE_SHIP
+		SaveSystem.save_run(run)
+		change_screen(Screen.BATTLE)
+		return
 	Morale.change(run, roundi(Perks.add(run, "morale_per_node")))
 	# A day's sailing: the crew drinks its rum ration, or grumbles without one.
 	if run.rum > 0:
@@ -85,7 +92,7 @@ func finish_node() -> void:
 	if here >= 0:
 		var node: Dictionary = run.map["nodes"][here]
 		run.node_index = mini(int(node["layer"]) + 1, RunState.NODES_PER_SEA - 1)
-		at_exit = str(node["type"]) == "elite"
+		at_exit = str(node["type"]) == "elite" or str(node["type"]) == "boss"
 	else:
 		run.node_index += 1
 	if at_exit:
@@ -133,6 +140,7 @@ func end_run(won: bool) -> void:
 	var doubloons := run.battles_won + (25 if won else 0)
 	last_run_summary = {
 		"won": won,
+		"epilogue": Voyage.EPILOGUE if won else "",
 		"sea_number": mini(run.sea_number, RunState.SEAS_PER_RUN),
 		"battles_won": run.battles_won,
 		"doubloons": doubloons,

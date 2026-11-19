@@ -75,6 +75,15 @@ func smoke_plume(pos: Vector2) -> void:
 		_burst(pos, Color(1.0, 0.55, 0.15), 4, 0.8, Vector2(0, -1), 40.0, 30.0, Vector2(0, -10), 2.0, null, true)
 
 
+## A magazine or a gun deck going up: far bigger than a shot landing.
+func explosion(pos: Vector2) -> void:
+	_burst(pos, Color(1.0, 0.75, 0.3), 26, 0.45, Vector2(0, -1), 180.0, 150.0, Vector2.ZERO, 14.0, _flash_tex, true)
+	_burst(pos, Color(1.0, 0.45, 0.1), 18, 0.8, Vector2(0, -1), 180.0, 90.0, Vector2(0, 40), 6.0, null, true)
+	_burst(pos, Color("3b2a1a"), 22, 1.2, Vector2(0, -1), 180.0, 160.0, Vector2(0, 220), 3.0, null, false)
+	_burst(pos, Color(0.12, 0.11, 0.1, 0.85), 14, 3.0, Vector2(0, -1), 60.0, 26.0, Vector2(4, -10), 28.0, _smoke_tex, false)
+	shake(9.0)
+
+
 ## Steel and pistol flashes where boarders are fighting.
 func melee_clash(pos: Vector2) -> void:
 	_burst(pos, Color(1.0, 0.95, 0.7), 6, 0.25, Vector2(0, -1), 180.0, 40.0, Vector2.ZERO, 2.0, null, true)

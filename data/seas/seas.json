@@ -161,10 +161,9 @@
     "name": "The South China Sea",
     "role": "final",
     "color": "2b2a3d",
-    "description": "The Company's home waters, and its flagship.",
+    "description": "The Company's home waters. Every sail is theirs, the port is a fortress, a blockade bars the way out, and beyond it waits the flagship.",
     "factions": {
-      "company": 5,
-      "navy": 1
+      "company": 1
     },
     "settlements": [
       "Canton Factory",
@@ -177,6 +176,8 @@
     "port_owners": {
       "company": 5
     },
-    "storms": 1.5
+    "storms": 1.5,
+    "factions_only": true,
+    "fort_boost": 1.5
   }
 ]

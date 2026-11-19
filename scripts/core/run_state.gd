@@ -42,6 +42,8 @@ var reputation: Dictionary = {}  # faction id -> -100..100 (see Reputation)
 var relics: Array = []  # relic ids we carry (see Perks)
 var upgrades: Dictionary = {}  # upgrade id -> level bought (see Perks)
 var quests: Dictionary = {}  # quest id -> "active" or "done" this voyage (see Hub)
+var boss_pending := false  # the next battle is the Company flagship
+var blockade_left := 0  # blockade ships still to fight, one straight after another
 var loot_pending := ""  # "battle" or "elite": we've won and are choosing our plunder
 var battles_won: int = 0
 
@@ -112,6 +114,8 @@ func to_dict() -> Dictionary:
 		"upgrades": upgrades,
 		"loot_pending": loot_pending,
 		"quests": quests,
+		"boss_pending": boss_pending,
+		"blockade_left": blockade_left,
 		"battles_won": battles_won,
 	}
 
@@ -170,6 +174,8 @@ static func from_dict(data: Dictionary) -> RunState:
 	for u: Variant in ups:
 		run.upgrades[str(u)] = int(ups[u])
 	run.loot_pending = str(data.get("loot_pending", ""))
+	run.boss_pending = bool(data.get("boss_pending", false))
+	run.blockade_left = int(data.get("blockade_left", 0))
 	var saved_quests: Dictionary = data.get("quests", {})
 	for q: Variant in saved_quests:
 		run.quests[str(q)] = str(saved_quests[q])

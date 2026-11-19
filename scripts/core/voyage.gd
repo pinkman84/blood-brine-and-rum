@@ -38,6 +38,14 @@ const SPECIALISTS_EARLY := 0.34  # share of her specialists an early enemy carri
 const SPECIALISTS_LATE := 1.0
 
 const HUNT_PER_DAY := 3
+
+# The last sea: every ship is the Company's ("factions_only" in data/seas),
+# the port's fort is stronger ("fort_boost"), a blockade bars the way to the
+# exit, and at the exit waits the flagship (see BossFight).
+const BLOCKADE_SHIP := "blockade_frigate"
+const BLOCKADE_SHIPS := 2  # fought one straight after another
+const FLAGSHIP := "company_flagship"
+const EPILOGUE := "The Sovereign rolls over and goes down, and the Company's power in these seas goes down with her. You sound the Aeolus Horn one last time, and a fair wind carries you through the wreck of the blockade and away into Brotherhood waters. The Company is beaten. The Horn is still yours."
 const HUNT_PER_COMPANY_SHIP := 8
 const HUNT_NEW_SEA := -15
 const HUNTED := 50  # hunters start to appear
