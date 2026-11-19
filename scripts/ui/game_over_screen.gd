@@ -17,6 +17,8 @@ func refresh() -> void:
 		int(s.get("doubloons", 0)),
 		Hub.doubloons(),
 	]
+	if str(s.get("epilogue", "")) != "":
+		_info.text = str(s["epilogue"]) + "\n\n" + _info.text
 	var unlocked: Array = s.get("unlocked", [])
 	if not unlocked.is_empty():
 		_info.text += "\n\nA new ship is waiting at home: %s." % ", ".join(unlocked)

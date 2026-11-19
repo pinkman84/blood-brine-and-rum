@@ -203,5 +203,134 @@
         "h": 6
       }
     ]
+  },
+  {
+    "id": "first_rate",
+    "cols": 5,
+    "rows": 10,
+    "scale": 0.88,
+    "mast_rows": [
+      2,
+      5,
+      8
+    ],
+    "rooms": [
+      {
+        "id": "rigging",
+        "type": "sails",
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 2
+      },
+      {
+        "id": "port_guns_1",
+        "type": "guns",
+        "side": "port",
+        "bank": 1,
+        "x": 0,
+        "y": 2,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "port_guns_2",
+        "type": "guns",
+        "side": "port",
+        "bank": 2,
+        "x": 0,
+        "y": 4,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "port_guns_3",
+        "type": "guns",
+        "side": "port",
+        "bank": 3,
+        "x": 0,
+        "y": 6,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "starboard_guns_1",
+        "type": "guns",
+        "side": "starboard",
+        "bank": 1,
+        "x": 4,
+        "y": 2,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "starboard_guns_2",
+        "type": "guns",
+        "side": "starboard",
+        "bank": 2,
+        "x": 4,
+        "y": 4,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "starboard_guns_3",
+        "type": "guns",
+        "side": "starboard",
+        "bank": 3,
+        "x": 4,
+        "y": 6,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "magazine",
+        "type": "magazine",
+        "x": 1,
+        "y": 2,
+        "w": 2,
+        "h": 2
+      },
+      {
+        "id": "sickbay",
+        "type": "sickbay",
+        "x": 3,
+        "y": 2,
+        "w": 1,
+        "h": 2
+      },
+      {
+        "id": "great_gun",
+        "type": "cannon",
+        "x": 1,
+        "y": 4,
+        "w": 3,
+        "h": 2
+      },
+      {
+        "id": "stores",
+        "type": "hold",
+        "x": 1,
+        "y": 6,
+        "w": 3,
+        "h": 2
+      },
+      {
+        "id": "hold",
+        "type": "hold",
+        "x": 0,
+        "y": 8,
+        "w": 5,
+        "h": 1
+      },
+      {
+        "id": "helm",
+        "type": "helm",
+        "x": 2,
+        "y": 9,
+        "w": 1,
+        "h": 1
+      }
+    ]
   }
 ]

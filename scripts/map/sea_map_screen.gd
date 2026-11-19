@@ -24,6 +24,8 @@ const STYLES := {
 	"haven": ["H", Color("a93226"), "Pirate haven: shore leave, hire crew"],
 	"port": ["P", Color("d4ac0d"), "Port"],
 	"outpost": ["$", Color("27ae60"), "Outpost: a place to trade"],
+	"blockade": ["#", Color("922b21"), "The Company blockade: two frigates, one after the other"],
+	"boss": ["!", Color("f1c40f"), "The Sovereign, flagship of the Company"],
 	"calm": ["~", Color("3f6f8a"), "Open water"],
 	"storm": ["S", Color("34495e"), "Storm clouds"],
 	"treasure": ["X", Color("e67e22"), "Treasure, if the old chart is true"],
@@ -148,7 +150,7 @@ func _sail_to(id: int) -> void:
 		type = "sailed"  # nothing left here; ports and outposts stay where they are
 	elif type == "calm" and randf() < AMBUSH_CHANCE:
 		type = "battle"  # a sail on the horizon, closing fast
-	if _run.hunt >= Voyage.INTERCEPT and type != "elite":
+	if _run.hunt >= Voyage.INTERCEPT and not ["elite", "blockade", "boss"].has(type):
 		# The hunt has found us: whatever was waiting here, a Company hunter is upon us.
 		_run.hunter_pending = true
 		_run.hunt = Voyage.AFTER_INTERCEPT
@@ -159,6 +161,13 @@ func _sail_to(id: int) -> void:
 			GameState.change_screen(GameState.Screen.BATTLE)
 		"elite":
 			_run.elite_pending = true
+			GameState.change_screen(GameState.Screen.BATTLE)
+		"blockade":
+			_run.forced_enemy = Voyage.BLOCKADE_SHIP
+			_run.blockade_left = Voyage.BLOCKADE_SHIPS - 1
+			GameState.change_screen(GameState.Screen.BATTLE)
+		"boss":
+			_run.boss_pending = true
 			GameState.change_screen(GameState.Screen.BATTLE)
 		"event", "storm", "treasure":
 			GameState.change_screen(GameState.Screen.EVENT)
@@ -232,7 +241,7 @@ func _reachable() -> Array:
 ## that's the places we could enter the sea.
 func _is_known(node: Dictionary) -> bool:
 	var id := int(node["id"])
-	if str(node["type"]) == "elite" or str(node["type"]) == "port" or _was_visited(id):
+	if ["elite", "port", "blockade", "boss"].has(str(node["type"])) or _was_visited(id):
 		return true
 	if int(_run.map["current"]) == -1:
 		return int(node["layer"]) == 0

@@ -8,6 +8,8 @@ extends RefCounted
 ## the port in the middle, on a strait between two landmasses (owned by a
 ## faction from the sea's "port_owners"), and the elite fight at the exit.
 ## A few outposts (OUTPOSTS, like FTL's stores) are scattered at random.
+## The last sea (role "final") ends differently: a blockade alone in the
+## column before the exit, and the flagship at the exit instead of an elite.
 ## Most of the sea is open water; what's at a node is only known once you're
 ## next to it (see the map screen).
 ##
@@ -40,7 +42,8 @@ static func generate(run_seed: int, sea: int, sea_id := "") -> Dictionary:
 	var weights := TYPE_WEIGHTS.duplicate()
 	weights["storm"] = float(weights["storm"]) * float(sea_data.get("storms", 1.0))  # the Cape lives up to its name
 	weights["treasure"] = float(weights["treasure"]) * Hub.treasure_factor()  # the home port's cartographer
-	var map := _build(rng, weights)
+	var final_sea := str(sea_data.get("role", "")) == "final"
+	var map := _build(rng, weights, final_sea)
 	_ensure_battles(map, rng)
 	_place_outposts(map, rng)
 	_name_port(map, rng, sea_data)
@@ -48,17 +51,24 @@ static func generate(run_seed: int, sea: int, sea_id := "") -> Dictionary:
 	return map
 
 
-static func _build(rng: RandomNumberGenerator, weights: Dictionary) -> Dictionary:
+static func _build(rng: RandomNumberGenerator, weights: Dictionary, final_sea := false) -> Dictionary:
 	var nodes: Array = []
 	var columns: Array = []  # column -> node ids, top to bottom
 	for col in LAYERS:
-		var single := col == LAYERS - 1 or col == PORT_LAYER
+		var blockade := final_sea and col == LAYERS - 2
+		var single := col == LAYERS - 1 or col == PORT_LAYER or blockade
 		var count := 1 if single else rng.randi_range(MIN_ROWS, MAX_ROWS)
 		var ids: Array = []
 		for k in count:
 			var x := lerpf(LEFT, RIGHT, float(col) / (LAYERS - 1)) + (0.0 if single else rng.randf_range(-12.0, 12.0))
 			var y := lerpf(TOP, BOTTOM, (k + 0.5) / count) + (0.0 if single else rng.randf_range(-10.0, 10.0))
-			var type := "elite" if col == LAYERS - 1 else ("port" if col == PORT_LAYER else _pick_type(rng, weights))
+			var type := _pick_type(rng, weights)
+			if col == LAYERS - 1:
+				type = "boss" if final_sea else "elite"
+			elif col == PORT_LAYER:
+				type = "port"
+			elif blockade:
+				type = "blockade"
 			nodes.append({"id": nodes.size(), "layer": col, "type": type, "pos": [roundf(x), roundf(y)], "links": []})
 			ids.append(nodes.size() - 1)
 		columns.append(ids)

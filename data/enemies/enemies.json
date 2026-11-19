@@ -621,5 +621,87 @@
       "gold": 20
     },
     "intro": "Silas Venn's Iron Gallows, the most feared slaver on the seas, blocks the passage. Thirty souls are chained below."
+  },
+  {
+    "id": "blockade_frigate",
+    "name": "Blockade frigate",
+    "faction": "company",
+    "special": true,
+    "max_hull": 46,
+    "guns_per_side": 6,
+    "reload_time": 11,
+    "accuracy": 0.58,
+    "gold_reward": 40,
+    "min_sea": 99,
+    "hull_color": "4a3b2c",
+    "sail_color": "f5f2ea",
+    "flag_color": "b03a2e",
+    "max_sails": 24,
+    "evasion": 0.07,
+    "layout": "brigantine",
+    "crew": [
+      "gunner",
+      "gunner",
+      "helmsman",
+      "carpenter",
+      "bosun",
+      "surgeon"
+    ],
+    "max_hands": 170,
+    "flees_at": 0.0,
+    "boards": false,
+    "intro": "The Company's blockade: frigates in line across the strait. There's no way round. Break through."
+  },
+  {
+    "id": "company_flagship",
+    "name": "Sovereign",
+    "captain": "Lord Governor Ashcroft",
+    "faction": "company",
+    "special": true,
+    "boss": true,
+    "max_hull": 45,
+    "guns_per_side": 3,
+    "reload_time": 14,
+    "accuracy": 0.42,
+    "gold_reward": 150,
+    "min_sea": 99,
+    "hull_color": "3a2c20",
+    "sail_color": "f5f2ea",
+    "flag_color": "b03a2e",
+    "max_sails": 40,
+    "evasion": 0.02,
+    "layout": "first_rate",
+    "crew": [
+      "gunner",
+      "gunner",
+      "gunner",
+      "carpenter",
+      "carpenter",
+      "surgeon",
+      "helmsman",
+      "bosun"
+    ],
+    "max_hands": 160,
+    "flees_at": 0.0,
+    "boards": false,
+    "intro": "The Sovereign, first-rate ship of the line and flagship of the Honourable Trading Company. Three decks of guns. Lord Governor Ashcroft has come for the Horn himself.",
+    "boss_fight": {
+      "phase_hull": [
+        45,
+        45,
+        60
+      ],
+      "banks": 3,
+      "boats_at_start": 2,
+      "boat_every": 12.0,
+      "boat_marines": 20,
+      "boat_hull": 6,
+      "boat_time": 14.0,
+      "boats_stop_at": 0.25,
+      "great_gun_reload": 22.0,
+      "great_gun_accuracy": 0.75,
+      "great_gun_damage": 0.25,
+      "breather_hull": 0.3
+    }
   }
 ]

@@ -11,7 +11,7 @@ const CELL := 22.0
 const HULL_MARGIN := 11.0
 const BOW_LENGTH := 36.0
 const MAX_HOLES := 40
-const ROOM_LETTERS := {"sails": "S", "guns": "G", "magazine": "M", "sickbay": "+", "helm": "H", "hold": "D"}
+const ROOM_LETTERS := {"sails": "S", "guns": "G", "magazine": "M", "sickbay": "+", "helm": "H", "hold": "D", "cannon": "!"}
 
 var hull_color := Color("6b4a2f")
 var floor_color := Color("4a3524")
@@ -218,6 +218,24 @@ func gun_room(side: String) -> Dictionary:
 		if room["type"] == "guns" and room["side"] == side:
 			return room
 	return {}
+
+
+## Every gun deck on a side, in layout order. Most ships have one; the
+## flagship has three banks.
+func gun_rooms(side: String) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for room in rooms:
+		if room["type"] == "guns" and room["side"] == side:
+			found.append(room)
+	return found
+
+
+## Where gun `index` of `count` in this gun room fires from, in local space.
+func muzzle_in(room: Dictionary, index: int, count: int) -> Vector2:
+	var rect := room.get("rect", Rect2()) as Rect2
+	var y := lerpf(rect.position.y + 4, rect.end.y - 4, (index + 0.5) / maxf(1.0, count))
+	var x := half_width() + 2
+	return Vector2(x if str(room.get("side", "")) == "starboard" else -x, y)
 
 
 func room_by_id(id: String) -> Dictionary:

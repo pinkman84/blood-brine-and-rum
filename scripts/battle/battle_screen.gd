@@ -123,6 +123,8 @@ var _log_timer: SceneTreeTimer
 var _fallen: Array[String] = []
 var _start_hands := 0
 var _intro_note := ""  # shown once the battle screen is built
+var _boss: BossFight = null  # set when the enemy is the Company flagship
+var _target_button: Button
 var _elite_fight := false  # the sea's exit fight: richer plunder
 var _can_parley := false  # an ordinary encounter: she might hail us first (see Reputation)
 var _cheat_button: Button
@@ -153,6 +155,12 @@ func _ready() -> void:
 	_player_view.crew = player_crew
 	_enemy_view.crew = enemy_crew
 	_build_ui()
+	if bool(_enemy_data.get("boss", false)):
+		_boss = BossFight.new()
+		_boss.setup(self)
+		_arena.add_child(_boss)
+		_enemy_reload_bar.visible = false  # her three banks keep their own time
+		_enemy_reload_other.visible = false
 	_update_stations()
 	_refresh_ui()
 	if _intro_note != "":
@@ -193,13 +201,19 @@ func _process(delta: float) -> void:
 	if _over:
 		_refresh_ui()
 		return
-	_enemy_think()
-	_enemy_board_think(delta)
+	if _boss != null:
+		_boss.tick(delta)  # her banks, boats and great gun
+		if _over:
+			_refresh_ui()
+			return
+	else:
+		_enemy_think()
+		_enemy_board_think(delta)
 	_enemy_crew_think(delta)
 	var guns_free := not _boarding.guns_silent()
 	if guns_free and player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
-	if guns_free and enemy.can_fire():
+	if guns_free and _boss == null and enemy.can_fire():
 		enemy.selected_ammo = _enemy_pick_ammo()
 		_fire(enemy, player, _enemy_view, _player_view)
 		var turn_chance := float(enemy.ai.get("turn_after_volley", 0.3))
@@ -240,6 +254,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_debug_lash_pressed()
 	elif key.keycode == KEY_T and DEBUG_CHEATS:
 		_on_cheat_pressed()
+	elif key.keycode == KEY_X and _boss != null:
+		_on_target_pressed()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -434,6 +450,12 @@ func _pick_enemy(sea: int) -> Dictionary:
 			picked = _port_fort(picked, run.port_owner)
 			run.port_owner = ""
 	run.forced_enemy = ""
+	if run.boss_pending:
+		run.boss_pending = false
+		picked = Data.get_item("enemies", Voyage.FLAGSHIP)
+		hunter = false
+	if picked.has("intro"):
+		_intro_note = str(picked["intro"])
 	if hunter:
 		var hunters := all.filter(func(e: Dictionary) -> bool: return bool(e.get("hunter", false)))
 		if not hunters.is_empty():
@@ -457,6 +479,8 @@ func _pick_enemy(sea: int) -> Dictionary:
 	boosted["max_hands"] = roundi(int(picked.get("max_hands", 100)) * scale)
 	boosted["accuracy"] = float(picked.get("accuracy", 0.5)) + Voyage.SEA_ACCURACY * (sea - 1)
 	boosted["gold_reward"] = roundi(int(picked.get("gold_reward", 10)) * (1.0 + Voyage.SEA_GOLD * (sea - 1)))
+	if bool(picked.get("boss", false)):
+		boosted["max_hands"] = int(picked.get("max_hands", 100))  # her crew sets how many boats she sends
 	if not bool(picked.get("special", false)):
 		# An ordinary ship: crewed and officered for how far we've come. A veteran is fully fitted out.
 		Voyage.fit_out(boosted, 1.0 if elite else Voyage.progress(run))
@@ -492,6 +516,7 @@ func _port_fort(base: Dictionary, owner: String) -> Dictionary:
 	var strength := float(port.get("fort_strength", 1.0))
 	fort["faction"] = owner
 	fort["name"] = str(port.get("fort_name", fort.get("name", "Fort")))
+	strength *= float(Voyage.sea(GameState.run).get("fort_boost", 1.0))  # the last sea's port is a fortress
 	fort["max_hull"] = roundi(int(base.get("max_hull", 50)) * strength)
 	fort["max_hands"] = roundi(int(base.get("max_hands", 120)) * strength)
 	fort["gold_reward"] = roundi(int(base.get("gold_reward", 40)) * float(port.get("plunder", 1.0)))
@@ -587,8 +612,10 @@ func _weighted_by_sea(options: Array, run: RunState) -> Dictionary:
 
 ## The sea decides the faction, how far we've come decides light, medium or heavy.
 func _encounter_weight(e: Dictionary, run: RunState) -> float:
-	var factions: Dictionary = Voyage.sea(run).get("factions", {})
-	return float(factions.get(e.get("faction", ""), 0.5)) * Voyage.class_weight(run, str(e.get("class", "")))
+	var sea_data := Voyage.sea(run)
+	var factions: Dictionary = sea_data.get("factions", {})
+	var other := 0.0 if bool(sea_data.get("factions_only", false)) else 0.5  # the last sea is all Company
+	return float(factions.get(e.get("faction", ""), other)) * Voyage.class_weight(run, str(e.get("class", "")))
 
 
 # --- Coming about -----------------------------------------------------------
@@ -666,6 +693,9 @@ func _tick_flight(ship: BattleShip, pursuer: BattleShip, view: ShipView, start_x
 func _on_flee_pressed() -> void:
 	if _over:
 		return
+	if _boss != null:
+		_log("The blockade's behind us and she's ahead. There's nowhere to run.")
+		return
 	if _boarding.is_lashed():
 		_log("We're lashed to her! Cut loose first.")
 		return
@@ -727,10 +757,22 @@ func _cut(ship: BattleShip) -> void:
 func _on_grapple_pressed() -> void:
 	if _over or _boarding.state == "melee":
 		return
+	if _boss != null:
+		_log("Her sides are three decks high. There's no boarding her.")
+		return
 	if _boarding.grappler == enemy or _boarding.state == "lashed":
 		_cut(player)
 	else:
 		_throw(player)
+	_refresh_ui()
+
+
+## Flagship fight: switch our guns between her and the boats.
+func _on_target_pressed() -> void:
+	if _over or _boss == null or _boss.boats.is_empty():
+		return
+	_boss.targeting_boats = not _boss.targeting_boats
+	_log("Gunners, fire on the boats!" if _boss.targeting_boats else "Gunners, back on the flagship!")
 	_refresh_ui()
 
 
@@ -982,6 +1024,9 @@ func _on_turn_pressed() -> void:
 func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view: ShipView) -> void:
 	var ammo_id := shooter.selected_ammo
 	var high := BattleShip.aims_high(ammo_id)
+	if shooter == player and _boss != null and _boss.targeting_boats and not _boss.boats.is_empty():
+		_boss.fire_at_boats(shooter.fire(0.0), ammo_id)  # the boats can't dodge, but they're small: see fire_at_boats
+		return
 	var hits := shooter.fire(target.evasion())
 	if ammo_id == "heated_shot":
 		var crew := player_crew if shooter == player else enemy_crew
@@ -1029,6 +1074,10 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 func _check_end() -> void:
 	if _over:
 		return
+	if _boss != null:
+		enemy.hands = maxi(1, enemy.hands)  # she doesn't strike; she has to be sunk
+		if enemy.hull <= 0 and _boss.hull_gone():
+			return  # only a phase ended: a gun deck's gone and there's a lull
 	if enemy.is_static and (enemy.hull <= 0 or enemy.hands + _party_of(enemy) <= 0):
 		_over = true
 		_fort_falls()  # forts don't sink: the walls are breached and the flag comes down
@@ -1134,6 +1183,11 @@ func _show_victory(captured: bool) -> void:
 	var patched := _write_back(true)
 	run.gold += gold
 	run.battles_won += 1
+	if _boss != null:
+		_show_result("The %s's magazine goes up. She rolls over and sinks with her colours still flying, and Lord Governor Ashcroft with her.\n+%d gold.%s\nThe way out is open." % [
+			enemy.display_name, gold, ("\nLost: " + ", ".join(_fallen) + ".") if not _fallen.is_empty() else ""],
+			"Sound the Horn and sail for Brotherhood waters", GameState.finish_node)
+		return
 	var headline := "The %s strikes her colours! Prize taken." if captured else "The %s goes down!"
 	if enemy.is_static:
 		headline = "The guns of the %s fall silent and her colours come down." if captured else "The walls of the %s are breached. The white flag goes up."
@@ -1325,8 +1379,8 @@ func _add_ship(data: Dictionary, pos: Vector2, flipped: bool, ship: BattleShip) 
 	view.sails_ratio = ship.sails_ratio()
 	view.base_position = pos
 	view.position = pos
-	if flipped:
-		view.scale.x = -1
+	var size := float(Data.get_item("layouts", str(data.get("layout", "sloop"))).get("scale", 1.0))  # the flagship is drawn smaller to fit
+	view.scale = Vector2(-size if flipped else size, size)
 	_arena.add_child(view)
 	return view
 
@@ -1429,6 +1483,8 @@ func _build_ui() -> void:
 	_debug_lash_button = _add_order_button(_boarding_row, _on_debug_lash_pressed, 0)
 	_debug_lash_button.text = "TEST: lash now (B)"
 	_debug_lash_button.add_theme_color_override("font_color", Color("ff9f43"))
+	_target_button = _add_order_button(_boarding_row, _on_target_pressed, 0)
+	_target_button.visible = false
 	_cheat_button = _add_order_button(_boarding_row, _on_cheat_pressed, 0)
 	_cheat_button.text = "TEST: god mode (T)"
 	_cheat_button.add_theme_color_override("font_color", Color("ff9f43"))
@@ -1661,7 +1717,11 @@ func _refresh_boarding_ui() -> void:
 	var b := _boarding
 	var hooks := "%d/%d" % [b.hooks, Boarding.HOOKS_NEEDED]
 	var our_turn_to_board := b.state == "lashed" and b.initiative == player
-	_grapple_button.visible = b.state == "none" or b.state == "grappling"
+	_grapple_button.visible = (b.state == "none" or b.state == "grappling") and _boss == null
+	_target_button.visible = _boss != null and not _boss.boats.is_empty()
+	if _boss != null:
+		_target_button.text = "Target: %s (X)" % ("the boats" if _boss.targeting_boats else "the flagship")
+		_target_button.disabled = _over
 	_grapple_button.disabled = _over or b.cooldown(player) > 0.0
 	if b.grappler == enemy:
 		_grapple_button.text = "Cut ropes (G) %s" % hooks
@@ -1700,6 +1760,10 @@ func _status_text(ship: BattleShip) -> String:
 	var trouble := DamageControl.alerts(ship)
 	if trouble != "":
 		guns += "  " + trouble.to_upper()
+	if _boss != null and ship == enemy:
+		guns = _boss.status() + ("  " + trouble.to_upper() if trouble != "" else "")
+	if _boss != null and ship == player and _boss.marines_aboard > 0.0:
+		guns += "  BOARDERS ABOARD: %d" % ceili(_boss.marines_aboard)
 	if ship.is_static:  # a fort: no sails, and it can't dodge
 		return "Walls %d/%d  HANDS %d/%d\n%s" % [ship.hull, ship.max_hull, ship.hands, ship.max_hands, guns]
 	return "Hull %d/%d  Sails %d/%d  HANDS %d/%d\nDodge %d%%  %s" % [
