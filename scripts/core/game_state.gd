@@ -5,7 +5,7 @@ extends Node
 ## into here (start a run, finish a node, end the run) and never load each
 ## other directly.
 
-enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, HAVEN, SHIP_SELECT, LOOT, OUTPOST, HUB }
+enum Screen { MENU, SEA_MAP, BATTLE, EVENT, SHOP, GAME_OVER, SEA_CHART, SHIP_SELECT, LOOT, OUTPOST, HUB }
 
 const SCREEN_SCENES := {
 	Screen.MENU: "res://scenes/ui/menu.tscn",
@@ -15,7 +15,6 @@ const SCREEN_SCENES := {
 	Screen.SHOP: "res://scenes/ui/shop.tscn",
 	Screen.GAME_OVER: "res://scenes/ui/game_over.tscn",
 	Screen.SEA_CHART: "res://scenes/map/sea_chart.tscn",
-	Screen.HAVEN: "res://scenes/ui/haven.tscn",
 	Screen.SHIP_SELECT: "res://scenes/ui/ship_select.tscn",
 	Screen.LOOT: "res://scenes/ui/loot.tscn",
 	Screen.OUTPOST: "res://scenes/ui/outpost.tscn",

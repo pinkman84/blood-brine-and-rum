@@ -91,4 +91,3 @@ Next, roughly in order (confirm with Aidan):
 - **A ship screen** to inspect relics, upgrades and crew.
 - **Combat depth before tuning:** weather in battle, sea swell, timing. Fights are currently too easy to just "fit and hit".
 - **Tuning pass**, then art (Phase 9), audio (10) and polish (11).
-- Housekeeping: `haven_screen.gd` and `scenes/ui/haven.tscn` are unused leftovers and can be deleted.
