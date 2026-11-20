@@ -49,6 +49,12 @@ var unlimited_ammo := false
 var ammo: Dictionary = {}  # ammo id -> rounds
 var selected_ammo := "round_shot"
 var rooms: Dictionary = {}  # room id -> damage, fire and flood state (see DamageControl)
+# Augments (see Augments); enemies have none for now.
+var fire_fighting := 1.0  # how fast fires are put out
+var cut_skill := 1.0  # chance to cut grapple ropes
+var shot_damage := 0  # extra hull damage per round or heated shot that holes her target
+var explode_chance := 0.0  # a round shot hit explodes
+var snipers := 0  # in the rigging, picking off the other ship's people
 
 
 static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
@@ -70,6 +76,11 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.base_accuracy += Perks.add(run, "accuracy")
 	s.accuracy = s.base_accuracy
 	s.reload_time *= Perks.mult(run, "reload")
+	s.fire_fighting = Perks.mult(run, "firefight")
+	s.cut_skill = Perks.mult(run, "cut")
+	s.shot_damage = roundi(Perks.add(run, "shot_damage"))
+	s.explode_chance = Perks.add(run, "explode_chance")
+	s.snipers = roundi(Perks.add(run, "sniper"))
 	return s
 
 
@@ -234,12 +245,16 @@ static func is_free_ammo(ammo_id: String) -> bool:
 
 
 ## Applies one hit of the given ammo type. A ship caught mid-turn shows her
-## stern, and a raking shot does double hull and crew damage. Returns true if
-## the hit raked her.
-func take_hit(ammo_id: String) -> bool:
+## stern, and a raking shot does double hull and crew damage. `bonus` is the
+## shooter's extra hull damage (fine powder), for shot heavy enough to hole a
+## hull (round and heated). Returns true if the hit raked her.
+func take_hit(ammo_id: String, bonus := 0) -> bool:
 	var a := Data.get_item("ammo", ammo_id)
 	var mult := RAKE_MULTIPLIER if turning else 1
-	hull = maxi(0, hull - int(a.get("hull_damage", 1)) * mult)
+	var damage := int(a.get("hull_damage", 1))
+	if damage >= 2:
+		damage += bonus
+	hull = maxi(0, hull - damage * mult)
 	sails = maxi(0, sails - int(a.get("sail_damage", 0)))
 	lose_hands(roundi(float(a.get("crew_damage", 0)) * randf_range(0.5, 1.5)) * mult)
 	return turning

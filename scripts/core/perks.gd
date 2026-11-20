@@ -1,7 +1,9 @@
 class_name Perks
 extends RefCounted
 ## Relics and ship upgrades: the things that make one voyage's ship different
-## from another's. Both are data (data/relics, data/upgrades).
+## from another's. Both are data (data/relics, data/upgrades). Augments
+## (scripts/core/augments.gd) use the same mods, so add() and mult() count
+## them too.
 ##
 ## Relic:   { id, name, description, mods?, gain?, story? }   you own it or you don't
 ## Upgrade: { id, name, description, cost, max_level, mods?, gain? }   bought at ports, in levels
@@ -22,6 +24,7 @@ extends RefCounted
 ##   rep_gain_mult      reputation gains
 ##   morale_loss_mult   morale losses
 ##   morale_per_node_add, hunt_per_day_add   each day at sea
+##   (augments add more keys: see Augments)
 
 const UPGRADE_COST_GROWTH := 1.5  # each level costs this much more than the last
 const RELIC_CHANCE := 0.25  # chance an ordinary prize has a relic aboard
@@ -37,6 +40,8 @@ static func add(run: RunState, stat: String) -> float:
 		total += float(_mods("relics", str(id)).get(key, 0.0))
 	for id: Variant in run.upgrades:
 		total += float(_mods("upgrades", str(id)).get(key, 0.0)) * int(run.upgrades[id])
+	for id: Variant in run.augments:
+		total += float(_mods("augments", str(id)).get(key, 0.0))
 	return total
 
 
@@ -49,6 +54,8 @@ static func mult(run: RunState, stat: String) -> float:
 		total *= float(_mods("relics", str(id)).get(key, 1.0))
 	for id: Variant in run.upgrades:
 		total *= pow(float(_mods("upgrades", str(id)).get(key, 1.0)), int(run.upgrades[id]))
+	for id: Variant in run.augments:
+		total *= float(_mods("augments", str(id)).get(key, 1.0))
 	return total
 
 

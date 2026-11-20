@@ -4,6 +4,8 @@ extends ScreenBase
 ## The rules live in scripts/core/events.gd; the events in data/events.
 ## Storm and treasure nodes draw from their own pools. A forced event (a
 ## mutiny) happens between nodes, so it returns to the map without moving on.
+## An outcome with an "augment" effect offers it before moving on
+## (ScreenBase.offer_augment, which may ask which one to throw over).
 
 var _event: Dictionary = {}
 var _result_lines: Array[String] = []
@@ -66,9 +68,28 @@ func _choose(choice: Dictionary) -> void:
 	_result_text = str(outcome.get("text", ""))
 	_result_lines = Events.apply(GameState.run, effects)
 	_battle = str(effects.get("battle", ""))
-	for button in _buttons.get_children():
-		button.queue_free()
 	GameState.run.forced_event = ""
+	clear_buttons()
+	var aug := str(effects.get("augment", ""))
+	if aug == "random":
+		aug = Augments.roll(GameState.run)
+	if aug != "" and Data.has_item("augments", aug):
+		offer_augment(aug, _augment_done.bind(aug, effects))
+		return
+	_carry_on(effects)
+
+
+func _augment_done(fitted: bool, id: String, effects: Dictionary) -> void:
+	if fitted:
+		_result_lines.append("%s comes aboard" % Augments.name_of(id))
+	else:
+		_result_lines.append("%s is left behind" % Augments.name_of(id))
+	clear_buttons()
+	_carry_on(effects)
+
+
+## The way on from here: back to the map, into a fight, or the end.
+func _carry_on(effects: Dictionary) -> void:
 	if bool(effects.get("end_run", false)):
 		add_button("Over the side...", GameState.end_run.bind(false))
 		refresh()

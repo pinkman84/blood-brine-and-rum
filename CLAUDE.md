@@ -16,7 +16,7 @@ A PC pirate roguelite in Godot 4.7 (GDScript), inspired by FTL, Slay the Spire a
 
 **Factions:** the Company, Royal Navy, Pirate Brotherhood, rival pirates, slavers. Reputation -100..100 per faction, per run (Hated, Hostile, Wary, Friendly, Allied); the starting ship shifts it. It sets port prices, whether ports trade, whether ships at sea salute you, take a bribe or fight, and which event choices are open. Each faction has a light, medium and heavy ship; early in a run they're mostly light, under-crewed and short of specialists, late they're heavy and fully fitted out.
 
-**Progression in a run:** plunder after every win (pick 1 of 3; sometimes a relic), 15 relics with passive effects, shipyard upgrades at ports, random outposts (FTL-style stores) at sea.
+**Progression in a run:** plunder after every win (pick 1 of 3; sometimes a relic or an augment), 15 relics with passive effects, shipyard upgrades at ports, random outposts (FTL-style stores) at sea. **Augments** (like FTL's) are people and kit aboard, at most 3 per ship: finding one when full means throwing one over. Each is common, uncommon or rare (how often it turns up and its price). They come from plunder (10%, 25% from an elite), outpost augment stalls and events. The whaler augment brings in cargo, sold at ports and outposts. Faction-only augments (from their forts and ships) are planned.
 
 **Between runs:** the home port, Blackwater Cay (working name). Doubloons build and improve a tavern (better specialists), cartographer (more treasure), carpenter (more starting hull) and old captain (more hands). Ships unlock by deeds: Privateer cutter for reaching the last sea, Black frigate for beating the flagship, Turncoat brigantine for Jonas Pike's quest.
 
@@ -39,12 +39,12 @@ Autoloads (set in `project.godot`): `Data`, `SaveSystem`, `GameState`.
 | Run state and saves | `scripts/core/run_state.gd` (every field goes in `to_dict` and `from_dict`, with a default for old saves), `scripts/core/save_system.gd` (`meta` = progress between runs, `SAVE_VERSION`, `_migrate`) |
 | Flow and screens | `scripts/core/game_state.gd`: `Screen` enum and `SCREEN_SCENES`, `start_new_run`, `finish_node` (end of every node; also the blockade chain, mutiny check and sea change), `take_plunder`, `resume_map`, `end_run` |
 | Voyage | `scripts/core/voyage.gd`: seas, sea chart, enemy scaling, `progress()`, ship class weights and `fit_out`, the Company hunt, last-sea constants |
-| Morale, events, reputation, perks, home port | `scripts/core/morale.gd`, `events.gd` (requirements and effects of event choices), `reputation.gd`, `perks.gd` (relics and upgrades: `Perks.add` / `Perks.mult`), `hub.gd` (home port, ship unlocks, quests, specialist ranks) |
+| Morale, events, reputation, perks, home port | `scripts/core/morale.gd`, `events.gd` (requirements and effects of event choices), `reputation.gd`, `perks.gd` (relics, upgrades and augments: `Perks.add` / `Perks.mult`), `augments.gd` (slots, rarity rolls, cargo), `hub.gd` (home port, ship unlocks, quests, specialist ranks) |
 | Sea map | `scripts/map/sea_map_gen.gd` (generator), `sea_map_screen.gd` (fog, movement, ambushes), `sea_chart_screen.gd` |
 | Battle | `scripts/battle/battle_screen.gd` (the big one: setup, enemy picking, stations, firing, AI, boarding UI, hailing, victory and defeat), `battle_ship.gd`, `battle_crew.gd`, `damage_control.gd`, `boarding.gd`, `boss_fight.gd`, `ship_view.gd` (drawing), `battle_vfx.gd` (particles) |
-| Other screens | `scripts/ui/`: `screen_base.gd` (placeholder layout: info on the left, a scrolling column of buttons on the right), ship select, port (`shop_screen.gd`), outpost, event, loot, home port (`hub_screen.gd`), menu, game over |
+| Other screens | `scripts/ui/`: `screen_base.gd` (placeholder layout: info on the left, a scrolling column of buttons on the right; `offer_augment` is the shared fit-or-swap prompt), ship select, port (`shop_screen.gd`), outpost, event, loot, home port (`hub_screen.gd`), menu, game over |
 
-Data (`data/<category>/*.json`, arrays of objects with an `id`): ammo, ships, enemies, layouts, crew, names, factions, events, seas, relics, upgrades, outposts, hub, quests. Most content and tuning lives here. Each script's header comment documents the fields it reads.
+Data (`data/<category>/*.json`, arrays of objects with an `id`): ammo, ships, enemies, layouts, crew, names, factions, events, seas, relics, upgrades, outposts, hub, quests, augments, cargo. Most content and tuning lives here. Each script's header comment documents the fields it reads.
 
 ## Conventions
 
@@ -83,10 +83,10 @@ In-game testing aids (both in `battle_screen.gd`, to be switched off before rele
 
 ## Status (November 2026)
 
-Built and merged: Phases 0-8a. Core battles, boarding, crew and morale; the map, events, storms, treasure, ports and forts; factions and reputation; faction rosters; plunder, relics, the shipyard and outposts; the home port and ship unlocks; the last sea, blockade and flagship.
+Built and merged: Phases 0-8a. Ship augments are built (awaiting review). Core battles, boarding, crew and morale; the map, events, storms, treasure, ports and forts; factions and reputation; faction rosters; plunder, relics, the shipyard and outposts; the home port and ship unlocks; the last sea, blockade and flagship.
 
 Next, roughly in order (confirm with Aidan):
-- **Ship augments:** outposts already roll an augment stall (`stock["augments"]` is an empty list). Design what augments are and how they differ from relics and shipyard upgrades.
+- **Faction augments:** augments with a `faction` field are already kept out of the general pool; give them out from that faction's forts and ships.
 - **Phase 8 remainder:** story beats across runs (home port characters with new lines after milestones), branching endings (the Horn's fate).
 - **A ship screen** to inspect relics, upgrades and crew.
 - **Combat depth before tuning:** weather in battle, sea swell, timing. Fights are currently too easy to just "fit and hit".

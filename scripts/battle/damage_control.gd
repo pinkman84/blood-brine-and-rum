@@ -6,7 +6,8 @@ extends RefCounted
 ## trouble automatically, in this order per room: fight the fire, plug the
 ## leak, repair damage. Their effort is shared between every room that needs
 ## it and scales with the share of hands left. A specialist with a "work" buff
-## (the carpenter) doubles the work in the room they stand in.
+## (the carpenter) doubles the work in the room they stand in. Water barrels
+## (an augment) make firefighting faster (BattleShip.fire_fighting).
 
 const ROOM_HP := 3
 const FIRE_CHANCE := 0.12
@@ -89,7 +90,7 @@ static func tick(ship: BattleShip, view: ShipView, crew: Array, delta: float) ->
 		var work := share * float(boost.get(id, 1.0))
 
 		if float(s["fire"]) > 0.0:
-			s["fire"] = minf(100.0, float(s["fire"]) + FIRE_GROWTH * delta) - work * FIRE_FIGHTING * delta
+			s["fire"] = minf(100.0, float(s["fire"]) + FIRE_GROWTH * delta) - work * FIRE_FIGHTING * ship.fire_fighting * delta
 			if float(s["fire"]) <= 0.0:
 				s["fire"] = 0.0
 			else:

@@ -13,9 +13,10 @@ extends ScreenBase
 ##
 ## On top of that, each outpost rolls separately for two extras:
 ##   specialists for hire   "hire_chance": one or two looking for a berth
-##   ship augments          "augment_chance": a stall that fits augments.
-##                          Augments aren't built yet, so its shelves are
-##                          empty (stock["augments"] is the list to fill).
+##   ship augments          "augment_chance": a stall with up to
+##                          Augments.STALL_OFFERS augments (stock["augments"]),
+##                          priced by rarity.
+## Any cargo in the hold (the whaler's catch) can be sold here.
 
 const GOODS := {
 	"rum": {"label": "Buy 5 rum", "cost": 8, "lots": 3},
@@ -88,7 +89,12 @@ func _roll_stock(run: RunState) -> Dictionary:
 			hires.append(Hub.new_specialist())
 		stock["hires"] = hires
 	if randf() < float(_kind.get("augment_chance", 0.0)):
-		stock["augments"] = []  # to be filled once augments exist
+		var augs: Array = []
+		for i in randi_range(1, Augments.STALL_OFFERS):
+			var id := Augments.roll(run, augs)
+			if id != "":
+				augs.append(id)
+		stock["augments"] = augs
 	return stock
 
 
@@ -108,8 +114,13 @@ func _build() -> void:
 	for i in hires.size():
 		var who: Dictionary = hires[i]
 		add_button("Hire %s, %s (%d gold)" % [who.get("name", "?"), Hub.specialist_title(who), _price(run, HIRE_COST + Hub.hire_extra(who))], _hire.bind(i))
-	if stock.has("augments"):
-		add_button("Ship augments: the stall is here, but its shelves are bare for now", func() -> void: pass, false)
+	var augs: Array = stock.get("augments", [])
+	for i in augs.size():
+		var aug := str(augs[i])
+		if not run.augments.has(aug):
+			add_button("Augment: %s (%d gold)" % [Augments.describe(aug), _price(run, Augments.cost(aug))], _buy_augment.bind(i))
+	if not run.cargo.is_empty():
+		add_button("Sell the cargo: %s (%d gold)" % [Augments.cargo_text(run), Augments.cargo_value(run)], _sell_cargo)
 	add_button("Sail on", GameState.finish_node)
 
 
@@ -201,6 +212,36 @@ func _hire(index: int) -> void:
 		var who: Dictionary = hires.pop_at(index)
 		run.crew.append(who)
 		_note = "%s signs the articles." % who.get("name", "A new hand")
+	_rebuild()
+
+
+func _buy_augment(index: int) -> void:
+	var run: RunState = GameState.run
+	var augs: Array = _node["stock"].get("augments", [])
+	if index >= augs.size():
+		return
+	var id := str(augs[index])
+	if run.gold < _price(run, Augments.cost(id)):
+		_note = "Not enough gold for that."
+		_rebuild()
+		return
+	offer_augment(id, _augment_done.bind(id))
+
+
+## Back from the augment prompt: pay only if it came aboard.
+func _augment_done(fitted: bool, id: String) -> void:
+	var run: RunState = GameState.run
+	if fitted:
+		run.gold -= _price(run, Augments.cost(id))
+		(_node["stock"]["augments"] as Array).erase(id)
+		_note = "%s comes aboard." % Augments.name_of(id)
+	else:
+		_note = "You leave it on the stall."
+	_rebuild()
+
+
+func _sell_cargo() -> void:
+	_note = "Sold the cargo for %d gold." % Augments.sell_cargo(GameState.run)
 	_rebuild()
 
 

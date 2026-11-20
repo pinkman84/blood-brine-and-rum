@@ -4,6 +4,10 @@ extends Control
 ## column of buttons on the right, so any number of options fits on screen.
 ## Each screen extends this and overrides _title(), _build() and refresh().
 ## Later phases replace these with real screens one at a time.
+##
+## offer_augment() is shared by every screen that hands out ship augments
+## (plunder, outposts, events): it fits the augment, or if all slots are full
+## swaps the buttons for a "which one goes over the side?" choice.
 
 const BG_COLOR := Color("1b2633")
 const FONT_SIZE := 12
@@ -91,6 +95,38 @@ func add_button(text: String, action: Callable, enabled := true) -> Button:
 	return button
 
 
+func clear_buttons() -> void:
+	for b in _buttons.get_children():
+		b.queue_free()
+
+
+## Fits augment `id`. If every slot is full, asks which to throw over first.
+## Calls `done` with true once it's aboard, false if the player left it.
+func offer_augment(id: String, done: Callable) -> void:
+	var run: RunState = GameState.run
+	if Augments.fit(run, id):
+		done.call(true)
+		return
+	clear_buttons()
+	_info.text = "%s\n\nThere's no room aboard for more than %d. Throw one over the side to make room, or leave it behind.\n\nAboard:\n%s" % [
+		Augments.describe(id), Augments.MAX_SLOTS, _augment_list(run)]
+	for old: Variant in run.augments.duplicate():
+		add_button("Throw over %s, take %s" % [Augments.name_of(str(old)), Augments.name_of(id)], _swap_augment.bind(str(old), id, done))
+	add_button("Leave %s behind" % Augments.name_of(id), done.bind(false))
+
+
+func _swap_augment(old_id: String, new_id: String, done: Callable) -> void:
+	Augments.swap(GameState.run, old_id, new_id)
+	done.call(true)
+
+
+static func _augment_list(run: RunState) -> String:
+	var lines: Array[String] = []
+	for id: Variant in run.augments:
+		lines.append("- %s (%s)" % [Augments.name_of(str(id)), Augments.rarity(str(id))])
+	return "\n".join(lines)
+
+
 func run_summary() -> String:
 	return summary(GameState.run)
 
@@ -105,4 +141,14 @@ static func summary(run: RunState) -> String:
 		run.hands, run.max_hands, run.crew.size(),
 		run.morale, Morale.mood(run.morale), run.rum, "  (cask dry!)" if run.rum <= 0 else "",
 		run.hunt, "  (hunters about!)" if run.hunt >= Voyage.HUNTED else "",
-	]
+	] + _extras(run)
+
+
+## Augments and cargo, only when there are any.
+static func _extras(run: RunState) -> String:
+	var text := ""
+	if not run.augments.is_empty():
+		text += "\nAugments %d/%d: %s" % [run.augments.size(), Augments.MAX_SLOTS, Augments.names(run)]
+	if not run.cargo.is_empty():
+		text += "\nCargo: %s (%d gold)" % [Augments.cargo_text(run), Augments.cargo_value(run)]
+	return text

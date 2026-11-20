@@ -83,6 +83,9 @@ func finish_node() -> void:
 		run.rum -= 1
 	else:
 		Morale.change(run, Morale.NO_RUM)
+	var caught := Augments.catch_at_sea(run)  # the whaler, if we carry one
+	if caught != "":
+		run.last_note = caught if run.last_note == "" else run.last_note + " " + caught
 	# Steps through the sea follow the map: we're one past the node just finished.
 	# node_index is how far across the sea we are (the node's column), for
 	# Voyage.progress. The sea ends when we've dealt with its exit.

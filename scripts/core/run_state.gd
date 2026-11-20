@@ -41,6 +41,8 @@ var met_captains: Array = []  # elite captains already fought this run
 var reputation: Dictionary = {}  # faction id -> -100..100 (see Reputation)
 var relics: Array = []  # relic ids we carry (see Perks)
 var upgrades: Dictionary = {}  # upgrade id -> level bought (see Perks)
+var augments: Array = []  # augment ids fitted, at most Augments.MAX_SLOTS
+var cargo: Dictionary = {}  # cargo id -> count, to sell in port (see Augments)
 var quests: Dictionary = {}  # quest id -> "active" or "done" this voyage (see Hub)
 var boss_pending := false  # the next battle is the Company flagship
 var blockade_left := 0  # blockade ships still to fight, one straight after another
@@ -112,6 +114,8 @@ func to_dict() -> Dictionary:
 		"reputation": reputation,
 		"relics": relics,
 		"upgrades": upgrades,
+		"augments": augments,
+		"cargo": cargo,
 		"loot_pending": loot_pending,
 		"quests": quests,
 		"boss_pending": boss_pending,
@@ -173,6 +177,11 @@ static func from_dict(data: Dictionary) -> RunState:
 	var ups: Dictionary = data.get("upgrades", {})
 	for u: Variant in ups:
 		run.upgrades[str(u)] = int(ups[u])
+	for a: Variant in data.get("augments", []):
+		run.augments.append(str(a))
+	var saved_cargo: Dictionary = data.get("cargo", {})
+	for c: Variant in saved_cargo:
+		run.cargo[str(c)] = int(saved_cargo[c])
 	run.loot_pending = str(data.get("loot_pending", ""))
 	run.boss_pending = bool(data.get("boss_pending", false))
 	run.blockade_left = int(data.get("blockade_left", 0))

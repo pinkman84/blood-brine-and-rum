@@ -24,7 +24,14 @@ extends Node
 ## no running or turning), then the grappler may board with a party of hands.
 ##
 ## A ship that loses its hull sinks; one that loses all its hands strikes
-## its colours. Controls: SPACE pause, F arm the next broadside, C come about,
+## its colours.
+##
+## Augments (see Augments) work through BattleShip's fields: water barrels
+## (fire_fighting), sharp axes (cut_skill), fine powder (shot_damage), the
+## crazy scientist (explode_chance), the sniper (snipers, _tick_snipers) and
+## peg legs (BattleCrew.last_stand). Only the player's ship has them for now.
+##
+## Controls: SPACE pause, F arm the next broadside, C come about,
 ## R make sail, G throw grapples or cut ropes, click a specialist then a room
 ## to move them, right-click to deselect.
 
@@ -67,6 +74,11 @@ const STRUCK_GOLD := 1.5  # capturing a ship pays more than sinking it
 const HEAL_AFTER_BATTLE := 20  # health every surviving specialist recovers after a win
 const SURGEON_AFTER_BATTLE := 20  # extra if a surgeon survived
 const LOG_TIME := 4.0
+const SNIPER_TIME := 6.0  # seconds between a sniper's shots
+const SNIPER_SPECIALIST_CHANCE := 0.25  # a shot goes for one of their specialists instead of a hand
+const SNIPER_WOUND := 35.0
+const EXPLODE_DAMAGE := 3  # extra hull when the scientist's round shot goes off
+const EXPLODE_WOUND := 25.0  # to every specialist in the room
 
 var player: BattleShip
 var enemy: BattleShip
@@ -128,6 +140,7 @@ var _target_button: Button
 var _elite_fight := false  # the sea's exit fight: richer plunder
 var _can_parley := false  # an ordinary encounter: she might hail us first (see Reputation)
 var _cheat_button: Button
+var _sniper_t := 0.0
 static var _cheats_on := false  # testing: stays on for the rest of the session once pressed
 
 
@@ -149,6 +162,8 @@ func _ready() -> void:
 	_player_view.room_states = player.rooms
 	_enemy_view.room_states = enemy.rooms
 	player_crew = _place_crew(_player_view, run.crew)
+	for c: BattleCrew in player_crew:
+		c.last_stand = Perks.add(run, "last_stand")  # peg legs
 	enemy_crew = _place_crew(_enemy_view, _enemy_crew_entries())
 	for c: BattleCrew in enemy_crew:
 		_enemy_homes[c] = c.room_id
@@ -210,6 +225,7 @@ func _process(delta: float) -> void:
 		_enemy_think()
 		_enemy_board_think(delta)
 	_enemy_crew_think(delta)
+	_tick_snipers(delta)
 	var guns_free := not _boarding.guns_silent()
 	if guns_free and player.can_fire() and (player.armed or player.auto_fire):
 		_fire(player, enemy, _player_view, _enemy_view)
@@ -742,7 +758,7 @@ func _throw(ship: BattleShip) -> void:
 
 func _cut(ship: BattleShip) -> void:
 	var crew := player_crew if ship == player else enemy_crew
-	var result := _boarding.try_cut(ship, _grapple_skill(ship, crew))
+	var result := _boarding.try_cut(ship, _grapple_skill(ship, crew) * ship.cut_skill)
 	var ours := ship == player
 	match result:
 		"failed":
@@ -1051,7 +1067,8 @@ func _fire(shooter: BattleShip, target: BattleShip, from_view: ShipView, to_view
 
 
 func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: String, high: bool) -> void:
-	if target.take_hit(ammo_id):
+	var shooter := player if target == enemy else enemy
+	if target.take_hit(ammo_id, shooter.shot_damage):
 		_vfx.shake(5.0)
 		_log("Raked! A shot down the length of the deck." if target == player else "You rake her stern!")
 	view.sails_ratio = target.sails_ratio()
@@ -1065,10 +1082,46 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 		if not room.is_empty():
 			DamageControl.on_hit(target, room, ammo_id)
 			DamageControl.wound_room(player_crew if target == player else enemy_crew, room["id"], ammo_id)
-			_report_deaths()
+		if ammo_id == "round_shot" and randf() < shooter.explode_chance:
+			_explode(target, view, local_hit, room)
+		_report_deaths()
 	view.add_hands_lost(target.hands_ratio())
 	_check_end()
 	_refresh_ui()
+
+
+## The crazy scientist's round shot goes off inside her.
+func _explode(target: BattleShip, view: ShipView, local_hit: Vector2, room: Dictionary) -> void:
+	target.hull = maxi(0, target.hull - EXPLODE_DAMAGE)
+	_vfx.explosion(view.transform * local_hit)
+	if not room.is_empty():
+		DamageControl.ignite(target.rooms[room["id"]])
+		for c: BattleCrew in (player_crew if target == player else enemy_crew):
+			if c.alive and c.room_id == room["id"]:
+				c.hurt(EXPLODE_WOUND * randf_range(0.7, 1.3))
+	_log("The scientist's shot explodes inside her!" if target == enemy else "Their shot explodes inside us!")
+
+
+## Snipers in the rigging pick off the other ship's hands, and now and then
+## one of her specialists.
+func _tick_snipers(delta: float) -> void:
+	if player.snipers <= 0 or (_boss != null and _boss.targeting_boats):
+		return
+	_sniper_t += delta * player.snipers
+	if _sniper_t < SNIPER_TIME:
+		return
+	_sniper_t = 0.0
+	var targets := enemy_crew.filter(func(c: BattleCrew) -> bool: return c.alive)
+	if not targets.is_empty() and randf() < SNIPER_SPECIALIST_CHANCE:
+		var victim: BattleCrew = targets.pick_random()
+		victim.hurt(SNIPER_WOUND * randf_range(0.7, 1.3))
+		if victim.alive:
+			_log("Our sniper wings their %s!" % victim.role_name().to_lower())
+		_report_deaths()
+	elif enemy.hands > 0:
+		enemy.lose_hands(1)
+		_enemy_view.add_hands_lost(enemy.hands_ratio())
+	_check_end()
 
 
 func _check_end() -> void:
@@ -1298,6 +1351,10 @@ func _write_back(won: bool) -> Dictionary:
 
 ## Announces specialists who died since the last check, on both ships.
 func _report_deaths() -> void:
+	for c: BattleCrew in player_crew:
+		if c.saved and not c.save_reported:
+			c.save_reported = true
+			_log("%s goes down, but the sawbones has them back on a timber leg!" % c.crew_name)
 	for c: BattleCrew in player_crew + enemy_crew:
 		if c.alive or c.death_reported:
 			continue
