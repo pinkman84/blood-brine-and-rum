@@ -26,6 +26,8 @@ extends RefCounted
 ##   quest: a quest id to start (data/quests; see Hub)
 ##   days: time lost; each day drinks a rum ration and lets the Company hunt grow
 ##   end_run: true; the voyage is over (the event screen ends the run)
+##   augment: "random" or an augment id; the event screen fits it (asking
+##            which to throw over if the ship is full; see Augments)
 
 const DEFAULT_WEIGHT := 1.0
 

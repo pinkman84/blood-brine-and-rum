@@ -1,0 +1,169 @@
+[
+  {
+    "id": "discharged_gunner",
+    "title": "A discharged gun captain",
+    "text": "A boat pulls alongside with one passenger: a grey-haired gun captain, paid off from the Navy with nothing but his drill book and a grudge. He'll teach your gun crews for a price.",
+    "choices": [
+      {
+        "text": "Pay him to sign on (40 gold)",
+        "requires": {
+          "gold": 40
+        },
+        "outcomes": [
+          {
+            "text": "By sunset he has the gun crews running out and in like clockwork, and cursing them like the King's own.",
+            "effects": {
+              "gold": -40,
+              "augment": "navy_training"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Send him on his way",
+        "outcomes": [
+          {
+            "text": "He spits over the side and rows off towards the next sail.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wrecked_packet",
+    "title": "A cook in a hen coop",
+    "text": "Floating in a hen coop among the wreckage of a packet ship: a furious Frenchman clutching a copper pan, and two very wet chickens.",
+    "choices": [
+      {
+        "text": "Haul him aboard",
+        "outcomes": [
+          {
+            "text": "He takes one look at the galley, swears in three languages, and that night the crew eat like admirals.",
+            "effects": {
+              "augment": "french_cook",
+              "morale": 3
+            },
+            "chance": 3
+          },
+          {
+            "text": "He's grateful, but the moment you touch land he's gone, and so are two casks of rum.",
+            "effects": {
+              "rum": -2
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Take the chickens, leave the Frenchman",
+        "outcomes": [
+          {
+            "text": "Fresh eggs for a week. The crew don't look you in the eye.",
+            "effects": {
+              "morale": -2,
+              "rum": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stove_whaler",
+    "title": "A whaler stove in",
+    "text": "A Nantucket whaler, her bow stove in by a bull whale, settling by the head. Her crew are in the boats, and one old harpooner won't let go of his iron.",
+    "choices": [
+      {
+        "text": "Take the harpooner aboard",
+        "outcomes": [
+          {
+            "text": "\"I'll pay my passage in oil,\" he says, and sets about rigging a lookout in your foretop.",
+            "effects": {
+              "augment": "experienced_whaler"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Strip her of oil before she goes down",
+        "outcomes": [
+          {
+            "text": "You get a dozen casks out before she slides under.",
+            "effects": {
+              "gold": 30,
+              "days": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "natural_philosopher",
+    "title": "A natural philosopher",
+    "text": "A small island, a smoking hut, and a man with no eyebrows waving a flag made from his own coat. He wants passage, and he promises to make your guns \"interesting\".",
+    "choices": [
+      {
+        "text": "Give him passage and the run of the magazine",
+        "outcomes": [
+          {
+            "text": "He sets to work on your round shot with a file, a funnel and an alarming grin.",
+            "effects": {
+              "augment": "crazy_scientist"
+            },
+            "chance": 3
+          },
+          {
+            "text": "His first 'improvement' goes off on deck. He survives, and so does his box of tricks.",
+            "effects": {
+              "hull": -5,
+              "augment": "crazy_scientist"
+            },
+            "chance": 1
+          }
+        ]
+      },
+      {
+        "text": "Leave him to it",
+        "outcomes": [
+          {
+            "text": "As you sail off, the hut explodes. A cheer comes faintly over the water.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chandlers_lighter",
+    "title": "A chandler's lighter",
+    "text": "A low lighter hails you, her deck crowded with crates and odd characters. \"Something for every ship, captain. No questions, no refunds.\"",
+    "choices": [
+      {
+        "text": "See what she has (60 gold)",
+        "requires": {
+          "gold": 60
+        },
+        "outcomes": [
+          {
+            "text": "You point at a crate, and what comes out is better than you hoped.",
+            "effects": {
+              "gold": -60,
+              "augment": "random"
+            }
+          }
+        ]
+      },
+      {
+        "text": "Wave her off",
+        "outcomes": [
+          {
+            "text": "She drifts away towards the next sail.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  }
+]

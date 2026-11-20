@@ -13,6 +13,7 @@ extends ScreenBase
 ##     who's left     supplies and hiring at half price, townsfolk pressed into the crew
 ##     loot           gold, rum and shot, but the market is stripped and the hunt grows
 ##   shipyard     ship upgrades (Perks): a few on offer at each trading port
+##   cargo        the whaler's catch (Augments) sells wherever they trade
 ## Arriving with low morale, some hands desert (or, in a haven, stay ashore).
 ## The owner's opinion of you (Reputation) scales prices, adds a hire when
 ## they're friendly, and if they hate you they won't trade at all.
@@ -144,6 +145,8 @@ func _add_trade(run: RunState) -> void:
 	if bool(_port.get("pay_off", false)):
 		for m: Dictionary in run.crew:
 			add_button("Pay off %s, %s" % [m.get("name", "?"), _role_name(m)], _pay_off.bind(m))
+	if not run.cargo.is_empty():
+		add_button("Sell the cargo: %s (%d gold)" % [Augments.cargo_text(run), Augments.cargo_value(run)], _sell_cargo)
 	if bool(_port.get("ransom", false)) and run.prisoners > 0:
 		add_button("Ransom %d prisoners (%d gold)" % [run.prisoners, run.prisoners * RANSOM_EACH], _ransom)
 
@@ -158,6 +161,12 @@ func _add_shipyard(run: RunState) -> void:
 		var rank := "" if int(u.get("max_level", 1)) == 1 else " %d of %d" % [lvl + 1, int(u.get("max_level", 1))]
 		add_button("Shipyard: %s%s. %s (%d gold)" % [u.get("name", id), rank, u.get("description", ""), _price(Perks.upgrade_cost(run, id))],
 			_buy_upgrade.bind(id))
+
+
+## The whaler's catch sells at its value wherever they'll trade with us.
+func _sell_cargo() -> void:
+	_note = "Sold the cargo for %d gold." % Augments.sell_cargo(GameState.run)
+	_rebuild()
 
 
 func _buy_upgrade(id: String) -> void:

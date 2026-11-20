@@ -3,7 +3,9 @@ extends ScreenBase
 ##
 ## Three offers. Usually stores (gold, shot, rum, timber, medicine, hands);
 ## an ordinary prize sometimes has a relic aboard (Perks.RELIC_CHANCE), and a
-## sea's elite captain always offers a choice of relics.
+## sea's elite captain always offers a choice of relics. Now and then a ship
+## augment is among the offers (Augments.BATTLE_CHANCE / ELITE_CHANCE); taking
+## one when the ship is full asks which to throw over (ScreenBase.offer_augment).
 
 const OFFERS := 3
 const GOLD_BASE := 12
@@ -13,7 +15,7 @@ const TIMBER_HULL := 10
 const MEDICINE := 40
 const VOLUNTEERS := 12
 
-var _offers: Array = []  # each { text, detail, relic? or effects? }
+var _offers: Array = []  # each { text, detail, relic? or augment? or effects? }
 var _taken := ""
 
 
@@ -39,7 +41,7 @@ func refresh() -> void:
 		lines.append("Her hold is ours, but there's only time and room for one thing. What do we take?")
 		lines.append("")
 		for o: Dictionary in _offers:
-			if o.has("relic"):
+			if o.has("relic") or o.has("augment"):
 				lines.append("%s: %s" % [o["name"], o["detail"]])
 	lines.append("")
 	lines.append(run_summary())
@@ -48,7 +50,13 @@ func refresh() -> void:
 
 func _roll(run: RunState) -> void:
 	var elite := run.loot_pending == "elite"
-	var relics := Perks.relic_offers(run, OFFERS if elite else (1 if randf() < Perks.RELIC_CHANCE else 0))
+	if randf() < (Augments.ELITE_CHANCE if elite else Augments.BATTLE_CHANCE):
+		var aug := Augments.roll(run)
+		if aug != "":
+			var a := Data.get_item("augments", aug)
+			_offers.append({"augment": aug, "name": str(a["name"]), "detail": "(%s) %s" % [Augments.rarity(aug), a["description"]],
+				"text": "Augment: %s (%s)" % [a["name"], Augments.rarity(aug)]})
+	var relics := Perks.relic_offers(run, (OFFERS - _offers.size()) if elite else (1 if randf() < Perks.RELIC_CHANCE else 0))
 	for r: Dictionary in relics:
 		_offers.append({"relic": str(r["id"]), "name": str(r["name"]), "detail": str(r["description"]),
 			"text": "Relic: %s" % r["name"]})
@@ -80,6 +88,9 @@ func _stores(run: RunState, elite: bool) -> Array:
 func _take(index: int) -> void:
 	var run: RunState = GameState.run
 	var o: Dictionary = _offers[index]
+	if o.has("augment"):
+		offer_augment(str(o["augment"]), _augment_done.bind(o))
+		return
 	if o.has("relic"):
 		Perks.give_relic(run, str(o["relic"]))
 		_taken = "%s is yours. %s" % [o["name"], o["detail"]]
@@ -90,9 +101,23 @@ func _take(index: int) -> void:
 				m["health"] = mini(100, int(m.get("health", 100)) + int(o["heal"]))
 			lines.append("the wounded are tended")
 		_taken = "Carried aboard: %s." % ", ".join(lines)
-	run.loot_pending = ""
-	SaveSystem.save_run(run)
-	for b in _buttons.get_children():
-		b.queue_free()
+	_finish()
+
+
+## Back from the augment prompt: fitted, or left behind to choose again.
+func _augment_done(fitted: bool, o: Dictionary) -> void:
+	if fitted:
+		_taken = "%s comes aboard. %s" % [o["name"], o["detail"]]
+		_finish()
+		return
+	clear_buttons()
+	_build()
+	refresh()
+
+
+func _finish() -> void:
+	GameState.run.loot_pending = ""
+	SaveSystem.save_run(GameState.run)
+	clear_buttons()
 	_build()
 	refresh()

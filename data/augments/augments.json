@@ -1,0 +1,83 @@
+[
+  {
+    "id": "water_barrels",
+    "name": "Water and sand barrels",
+    "rarity": "common",
+    "description": "Barrels lashed by every hatch. Fires are put out 75% faster.",
+    "mods": {
+      "firefight_mult": 1.75
+    }
+  },
+  {
+    "id": "sharp_axes",
+    "name": "Sharp axes",
+    "rarity": "common",
+    "description": "Keen edges at every rail. Grapple ropes are cut 75% more easily.",
+    "mods": {
+      "cut_mult": 1.75
+    }
+  },
+  {
+    "id": "french_cook",
+    "name": "French cook",
+    "rarity": "common",
+    "description": "Proper food from the galley, and nobody asks what's in it. Morale drops 30% more slowly.",
+    "mods": {
+      "morale_loss_mult": 0.7
+    }
+  },
+  {
+    "id": "navy_training",
+    "name": "Navy training",
+    "rarity": "uncommon",
+    "description": "A gun captain who learned his drill on a ship of the line. Reload 15% faster.",
+    "mods": {
+      "reload_mult": 0.85
+    }
+  },
+  {
+    "id": "rigging_sniper",
+    "name": "Disgruntled sniper",
+    "rarity": "uncommon",
+    "description": "He hates everyone, them most of all. Sits in the rigging in battle picking off their hands, now and then one of their specialists.",
+    "mods": {
+      "sniper_add": 1
+    }
+  },
+  {
+    "id": "peg_legs",
+    "name": "Peg legs",
+    "rarity": "uncommon",
+    "description": "A sawbones with a stack of timber legs. A specialist cut down in battle has a 50% chance to be patched up and stay in service (once each per fight).",
+    "mods": {
+      "last_stand_add": 0.5
+    }
+  },
+  {
+    "id": "experienced_whaler",
+    "name": "Experienced whaler",
+    "rarity": "uncommon",
+    "description": "An old Nantucket hand with a harpoon. 20% chance each day at sea to bring in whale oil, whalebone or even ambergris, to sell at any port or outpost.",
+    "mods": {
+      "catch_add": 0.2
+    }
+  },
+  {
+    "id": "fine_powder",
+    "name": "Fine-corned powder",
+    "rarity": "rare",
+    "description": "Powder milled fine and dry. Every round or heated shot that strikes the hull does 1 more damage.",
+    "mods": {
+      "shot_damage_add": 1
+    }
+  },
+  {
+    "id": "crazy_scientist",
+    "name": "Crazy scientist",
+    "rarity": "rare",
+    "description": "A natural philosopher with singed eyebrows and a box of 'improvements'. Round shot that hits has a 15% chance to explode: +3 hull damage, fire, and anyone nearby is hurt.",
+    "mods": {
+      "explode_chance_add": 0.15
+    }
+  }
+]

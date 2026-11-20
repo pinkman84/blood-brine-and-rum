@@ -6,6 +6,7 @@ extends RefCounted
 const SPEED := 45.0  # pixels per second
 const MAX_HEALTH := 100.0
 const WOUNDED := 50.0  # below this, a specialist's buff is halved
+const LAST_STAND_HEALTH := 20.0  # health a specialist saved by peg legs is left with
 
 var crew_name := ""
 var role := ""
@@ -18,6 +19,9 @@ var room_id := ""
 var pos := Vector2.ZERO
 var target := Vector2.ZERO
 var source: Dictionary = {}  # the run's crew entry, for writing results back
+var last_stand := 0.0  # chance to survive a killing blow once per battle (peg legs augment)
+var saved := false  # used their last stand this battle
+var save_reported := false
 
 
 func is_moving() -> bool:
@@ -56,6 +60,10 @@ func hurt(amount: float) -> bool:
 	if not alive or amount <= 0.0:
 		return false
 	health = maxf(0.0, health - amount)
+	if health <= 0.0 and not saved and randf() < last_stand:
+		saved = true  # patched up with a timber leg, and back to work
+		health = LAST_STAND_HEALTH
+		return false
 	if health <= 0.0:
 		alive = false
 		return true
