@@ -52,13 +52,14 @@ static func efficiency(state: Dictionary) -> float:
 
 ## A shot has landed in `room` (a ShipView room). Light shot (grape, chain)
 ## only hurts people and rigging; it doesn't wreck rooms or hole the hull.
-static func on_hit(ship: BattleShip, room: Dictionary, ammo_id: String) -> void:
+## `extra_fire` is the shooter's added fire chance (fire pots).
+static func on_hit(ship: BattleShip, room: Dictionary, ammo_id: String, extra_fire := 0.0) -> void:
 	if int(Data.get_item("ammo", ammo_id).get("hull_damage", 0)) < 2:
 		return
 	var state: Dictionary = ship.rooms[room["id"]]
 	state["damage"] = mini(ROOM_HP, int(state["damage"]) + 1)
 	var fire_chance := MAGAZINE_FIRE_CHANCE if room["type"] == "magazine" else FIRE_CHANCE
-	fire_chance += float(Data.get_item("ammo", ammo_id).get("fire_chance", 0.0))
+	fire_chance += float(Data.get_item("ammo", ammo_id).get("fire_chance", 0.0)) + extra_fire
 	if randf() < fire_chance:
 		ignite(state)
 	if LEAK_ROOMS.has(room["type"]) and not ship.is_static and randf() < LEAK_CHANCE:  # a fort can't spring a leak

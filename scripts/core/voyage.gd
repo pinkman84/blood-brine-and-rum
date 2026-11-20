@@ -81,7 +81,10 @@ static func enter_sea(run: RunState, id: String) -> void:
 		change_hunt(run, HUNT_NEW_SEA)
 
 
+## Augments can slow the hunt's growth (hunt_mult), never its fall.
 static func change_hunt(run: RunState, amount: int) -> void:
+	if amount > 0:
+		amount = roundi(amount * Perks.mult(run, "hunt"))
 	run.hunt = clampi(run.hunt + amount, 0, INTERCEPT)
 
 

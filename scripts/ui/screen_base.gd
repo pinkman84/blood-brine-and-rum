@@ -123,7 +123,7 @@ func _swap_augment(old_id: String, new_id: String, done: Callable) -> void:
 static func _augment_list(run: RunState) -> String:
 	var lines: Array[String] = []
 	for id: Variant in run.augments:
-		lines.append("- %s (%s)" % [Augments.name_of(str(id)), Augments.rarity(str(id))])
+		lines.append("- %s (%s)" % [Augments.name_of(str(id)), Augments.label(str(id))])
 	return "\n".join(lines)
 
 

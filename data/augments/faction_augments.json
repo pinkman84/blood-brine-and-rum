@@ -1,0 +1,103 @@
+[
+  {
+    "id": "company_signal_book",
+    "name": "Company signal book",
+    "faction": "company",
+    "rarity": "rare",
+    "description": "Their private codes, taken from a Company captain's cabin. You read their signals before their hunters do: the Company hunt grows 40% slower.",
+    "mods": {
+      "hunt_mult": 0.6
+    }
+  },
+  {
+    "id": "company_factor",
+    "name": "Disgraced Company factor",
+    "faction": "company",
+    "rarity": "uncommon",
+    "description": "Sacked for his honesty, or so he says. He knows what every cargo is worth and every merchant's price: +25% prize gold, prices 15% lower.",
+    "mods": {
+      "gold_mult": 1.25,
+      "price_mult": 0.85
+    }
+  },
+  {
+    "id": "royal_marines",
+    "name": "Deserted Royal Marines",
+    "faction": "navy",
+    "rarity": "uncommon",
+    "description": "A file of redcoats who'd had enough of the lash. Your people fight 30% harder hand to hand, boarding or repelling.",
+    "mods": {
+      "boarding_mult": 1.3
+    }
+  },
+  {
+    "id": "carronades",
+    "name": "Carronades",
+    "faction": "navy",
+    "rarity": "rare",
+    "description": "Short, ugly Navy smashers, light enough to mount anywhere. +1 gun a side.",
+    "mods": {
+      "guns_add": 1
+    }
+  },
+  {
+    "id": "black_flag",
+    "name": "The black flag",
+    "faction": "brotherhood",
+    "rarity": "uncommon",
+    "description": "The Brotherhood's own colours. Every crew knows what it means: their hands work 15% slower, shaking at their guns.",
+    "mods": {
+      "enemy_effort_mult": 0.85
+    }
+  },
+  {
+    "id": "grapple_men",
+    "name": "Brotherhood grapple men",
+    "faction": "brotherhood",
+    "rarity": "common",
+    "description": "Old hands who've thrown a thousand hooks. Grapples are 50% more likely to catch.",
+    "mods": {
+      "grapple_mult": 1.5
+    }
+  },
+  {
+    "id": "fire_pots",
+    "name": "Fire pots",
+    "faction": "rivals",
+    "rarity": "uncommon",
+    "description": "Clay pots of pitch and sulphur, slung from the yards. Every hit on her hull has an extra 10% chance to start a fire.",
+    "mods": {
+      "fire_chance_add": 0.1
+    }
+  },
+  {
+    "id": "swivel_guns",
+    "name": "Swivel guns",
+    "faction": "rivals",
+    "rarity": "uncommon",
+    "description": "Little guns on the rail, loaded with musket balls. In battle they pick off her hands, and now and then a specialist, like a second sniper.",
+    "mods": {
+      "sniper_add": 1
+    }
+  },
+  {
+    "id": "long_sweeps",
+    "name": "Long sweeps",
+    "faction": "slavers",
+    "rarity": "uncommon",
+    "description": "Great oars, built for running down the helpless. Your escape fills 40% faster, and ships running from you escape 40% slower.",
+    "mods": {
+      "escape_mult": 1.4
+    }
+  },
+  {
+    "id": "clipper_rig",
+    "name": "Clipper rig",
+    "faction": "slavers",
+    "rarity": "uncommon",
+    "description": "A slaver's sharp-built rig, made to outrun the Navy. +5% dodge.",
+    "mods": {
+      "evasion_add": 0.05
+    }
+  }
+]

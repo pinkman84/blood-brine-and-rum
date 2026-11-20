@@ -4,7 +4,8 @@ extends ScreenBase
 ## Three offers. Usually stores (gold, shot, rum, timber, medicine, hands);
 ## an ordinary prize sometimes has a relic aboard (Perks.RELIC_CHANCE), and a
 ## sea's elite captain always offers a choice of relics. Now and then a ship
-## augment is among the offers (Augments.BATTLE_CHANCE / ELITE_CHANCE); taking
+## augment is among the offers (Augments.BATTLE_CHANCE / ELITE_CHANCE), and
+## sometimes it's one of the beaten ship's faction's own (run.loot_faction); taking
 ## one when the ship is full asks which to throw over (ScreenBase.offer_augment).
 
 const OFFERS := 3
@@ -51,11 +52,11 @@ func refresh() -> void:
 func _roll(run: RunState) -> void:
 	var elite := run.loot_pending == "elite"
 	if randf() < (Augments.ELITE_CHANCE if elite else Augments.BATTLE_CHANCE):
-		var aug := Augments.roll(run)
+		var aug := Augments.roll_plunder(run, run.loot_faction)
 		if aug != "":
 			var a := Data.get_item("augments", aug)
-			_offers.append({"augment": aug, "name": str(a["name"]), "detail": "(%s) %s" % [Augments.rarity(aug), a["description"]],
-				"text": "Augment: %s (%s)" % [a["name"], Augments.rarity(aug)]})
+			_offers.append({"augment": aug, "name": str(a["name"]), "detail": "(%s) %s" % [Augments.label(aug), a["description"]],
+				"text": "Augment: %s (%s)" % [a["name"], Augments.label(aug)]})
 	var relics := Perks.relic_offers(run, (OFFERS - _offers.size()) if elite else (1 if randf() < Perks.RELIC_CHANCE else 0))
 	for r: Dictionary in relics:
 		_offers.append({"relic": str(r["id"]), "name": str(r["name"]), "detail": str(r["description"]),

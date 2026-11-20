@@ -29,7 +29,10 @@ extends Node
 ## Augments (see Augments) work through BattleShip's fields: water barrels
 ## (fire_fighting), sharp axes (cut_skill), fine powder (shot_damage), the
 ## crazy scientist (explode_chance), the sniper (snipers, _tick_snipers) and
-## peg legs (BattleCrew.last_stand). Only the player's ship has them for now.
+## peg legs (BattleCrew.last_stand), plus the faction ones: grapple men
+## (grapple_skill), fire pots (fire_chance), long sweeps (escape_rate; a
+## ship running from us escapes that much slower) and the black flag (the
+## enemy's morale_factor). Only the player's ship has them for now.
 ##
 ## Controls: SPACE pause, F arm the next broadside, C come about,
 ## R make sail, G throw grapples or cut ropes, click a specialist then a room
@@ -154,6 +157,8 @@ func _ready() -> void:
 		_apply_cheats()
 	_start_hands = player.hands
 	enemy = BattleShip.from_enemy(_enemy_data)
+	enemy.morale_factor *= Perks.mult(run, "enemy_effort")  # the black flag
+	enemy.escape_rate /= player.escape_rate  # long sweeps run her down
 	for side: String in BattleShip.SIDES:  # so the first volleys don't land together
 		enemy.reloads[side] = randf() * 3.0
 	_build_arena(ship_data)
@@ -691,7 +696,7 @@ func _tick_flight(ship: BattleShip, pursuer: BattleShip, view: ShipView, start_x
 		else:
 			var edge := clampf(ship.speed() / maxf(0.25, pursuer.speed()), 0.3, 2.0)
 			var held := 1.0 - _boarding.closeness()  # hooks in her hold her back
-			ship.escape = minf(1.0, ship.escape + edge / FLEE_TIME * held * delta)
+			ship.escape = minf(1.0, ship.escape + edge / FLEE_TIME * held * ship.escape_rate * delta)
 	elif not ship.fleeing:
 		ship.escape = maxf(0.0, ship.escape - ESCAPE_DECAY * delta)
 	view.base_position.x = start_x + away * FLEE_DRIFT * ship.escape - away * PULL_DISTANCE * _boarding.pull
@@ -740,7 +745,7 @@ func _grapple_skill(ship: BattleShip, crew: Array) -> float:
 
 func _throw(ship: BattleShip) -> void:
 	var crew := player_crew if ship == player else enemy_crew
-	var result := _boarding.try_throw(ship, _grapple_skill(ship, crew))
+	var result := _boarding.try_throw(ship, _grapple_skill(ship, crew) * ship.grapple_skill)
 	var ours := ship == player
 	match result:
 		"missed":
@@ -964,7 +969,7 @@ func _settle_prisoners(mode: String, count: int) -> void:
 
 ## A ship is beaten: on to choosing what we take from her (the plunder screen).
 func _to_plunder() -> void:
-	GameState.take_plunder("elite" if _elite_fight else "battle")
+	GameState.take_plunder("elite" if _elite_fight else "battle", str(_enemy_data.get("faction", "")))
 
 
 # --- Enemy captain and crew ------------------------------------------------
@@ -1080,7 +1085,7 @@ func _on_hit(target: BattleShip, view: ShipView, local_hit: Vector2, ammo_id: St
 		_vfx.impact(view.transform * local_hit)
 		var room := view.room_at(local_hit)
 		if not room.is_empty():
-			DamageControl.on_hit(target, room, ammo_id)
+			DamageControl.on_hit(target, room, ammo_id, shooter.fire_chance)
 			DamageControl.wound_room(player_crew if target == player else enemy_crew, room["id"], ammo_id)
 		if ammo_id == "round_shot" and randf() < shooter.explode_chance:
 			_explode(target, view, local_hit, room)

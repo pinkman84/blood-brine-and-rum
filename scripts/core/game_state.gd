@@ -125,9 +125,11 @@ func finish_node() -> void:
 	change_screen(Screen.SEA_MAP)
 
 
-## A battle is won: choose the plunder, then sail on. `kind` is "battle" or "elite".
-func take_plunder(kind: String) -> void:
+## A battle is won: choose the plunder, then sail on. `kind` is "battle" or
+## "elite"; `faction` is whose ship she was.
+func take_plunder(kind: String, faction := "") -> void:
 	run.loot_pending = kind
+	run.loot_faction = faction
 	SaveSystem.save_run(run)
 	change_screen(Screen.LOOT)
 
