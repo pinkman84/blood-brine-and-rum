@@ -55,6 +55,9 @@ var cut_skill := 1.0  # chance to cut grapple ropes
 var shot_damage := 0  # extra hull damage per round or heated shot that holes her target
 var explode_chance := 0.0  # a round shot hit explodes
 var snipers := 0  # in the rigging, picking off the other ship's people
+var grapple_skill := 1.0  # chance our grapples catch
+var fire_chance := 0.0  # added chance each hull hit starts a fire
+var escape_rate := 1.0  # how fast she escapes when running
 
 
 static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
@@ -81,6 +84,9 @@ static func from_run(run: RunState, ship: Dictionary) -> BattleShip:
 	s.shot_damage = roundi(Perks.add(run, "shot_damage"))
 	s.explode_chance = Perks.add(run, "explode_chance")
 	s.snipers = roundi(Perks.add(run, "sniper"))
+	s.grapple_skill = Perks.mult(run, "grapple")
+	s.fire_chance = Perks.add(run, "fire_chance")
+	s.escape_rate = Perks.mult(run, "escape")
 	return s
 
 

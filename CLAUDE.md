@@ -16,7 +16,7 @@ A PC pirate roguelite in Godot 4.7 (GDScript), inspired by FTL, Slay the Spire a
 
 **Factions:** the Company, Royal Navy, Pirate Brotherhood, rival pirates, slavers. Reputation -100..100 per faction, per run (Hated, Hostile, Wary, Friendly, Allied); the starting ship shifts it. It sets port prices, whether ports trade, whether ships at sea salute you, take a bribe or fight, and which event choices are open. Each faction has a light, medium and heavy ship; early in a run they're mostly light, under-crewed and short of specialists, late they're heavy and fully fitted out.
 
-**Progression in a run:** plunder after every win (pick 1 of 3; sometimes a relic or an augment), 15 relics with passive effects, shipyard upgrades at ports, random outposts (FTL-style stores) at sea. **Augments** (like FTL's) are people and kit aboard, at most 3 per ship: finding one when full means throwing one over. Each is common, uncommon or rare (how often it turns up and its price). They come from plunder (10%, 25% from an elite), outpost augment stalls and events. The whaler augment brings in cargo, sold at ports and outposts. Faction-only augments (from their forts and ships) are planned.
+**Progression in a run:** plunder after every win (pick 1 of 3; sometimes a relic or an augment), 15 relics with passive effects, shipyard upgrades at ports, random outposts (FTL-style stores) at sea. **Augments** (like FTL's) are people and kit aboard, at most 3 per ship: finding one when full means throwing one over. Each is common, uncommon or rare (how often it turns up and its price). They come from plunder (10%, 25% from an elite), outpost augment stalls and events. The whaler augment brings in cargo, sold at ports and outposts. Each faction has two augments of its own, found only by beating it: half the augments found aboard her ships are hers, and a taken fort's armoury holds one free.
 
 **Between runs:** the home port, Blackwater Cay (working name). Doubloons build and improve a tavern (better specialists), cartographer (more treasure), carpenter (more starting hull) and old captain (more hands). Ships unlock by deeds: Privateer cutter for reaching the last sea, Black frigate for beating the flagship, Turncoat brigantine for Jonas Pike's quest.
 
@@ -83,10 +83,9 @@ In-game testing aids (both in `battle_screen.gd`, to be switched off before rele
 
 ## Status (November 2026)
 
-Built and merged: Phases 0-8a. Ship augments are built (awaiting review). Core battles, boarding, crew and morale; the map, events, storms, treasure, ports and forts; factions and reputation; faction rosters; plunder, relics, the shipyard and outposts; the home port and ship unlocks; the last sea, blockade and flagship.
+Built and merged: Phases 0-8a. Ship augments are merged; faction augments are built (awaiting review). Core battles, boarding, crew and morale; the map, events, storms, treasure, ports and forts; factions and reputation; faction rosters; plunder, relics, the shipyard and outposts; the home port and ship unlocks; the last sea, blockade and flagship.
 
 Next, roughly in order (confirm with Aidan):
-- **Faction augments:** augments with a `faction` field are already kept out of the general pool; give them out from that faction's forts and ships.
 - **Phase 8 remainder:** story beats across runs (home port characters with new lines after milestones), branching endings (the Horn's fate).
 - **A ship screen** to inspect relics, upgrades and crew.
 - **Combat depth before tuning:** weather in battle, sea swell, timing. Fights are currently too easy to just "fit and hit".

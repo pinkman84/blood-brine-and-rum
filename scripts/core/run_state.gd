@@ -47,6 +47,7 @@ var quests: Dictionary = {}  # quest id -> "active" or "done" this voyage (see H
 var boss_pending := false  # the next battle is the Company flagship
 var blockade_left := 0  # blockade ships still to fight, one straight after another
 var loot_pending := ""  # "battle" or "elite": we've won and are choosing our plunder
+var loot_faction := ""  # whose ship it was (her faction's augments can turn up)
 var battles_won: int = 0
 
 
@@ -117,6 +118,7 @@ func to_dict() -> Dictionary:
 		"augments": augments,
 		"cargo": cargo,
 		"loot_pending": loot_pending,
+		"loot_faction": loot_faction,
 		"quests": quests,
 		"boss_pending": boss_pending,
 		"blockade_left": blockade_left,
@@ -183,6 +185,7 @@ static func from_dict(data: Dictionary) -> RunState:
 	for c: Variant in saved_cargo:
 		run.cargo[str(c)] = int(saved_cargo[c])
 	run.loot_pending = str(data.get("loot_pending", ""))
+	run.loot_faction = str(data.get("loot_faction", ""))
 	run.boss_pending = bool(data.get("boss_pending", false))
 	run.blockade_left = int(data.get("blockade_left", 0))
 	var saved_quests: Dictionary = data.get("quests", {})

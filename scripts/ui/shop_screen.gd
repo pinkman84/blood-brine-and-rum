@@ -12,6 +12,7 @@ extends ScreenBase
 ##     forced labour  a free full refit and a free surgeon
 ##     who's left     supplies and hiring at half price, townsfolk pressed into the crew
 ##     loot           gold, rum and shot, but the market is stripped and the hunt grows
+##     armoury        one of the owner faction's own augments, free (Augments)
 ##   shipyard     ship upgrades (Perks): a few on offer at each trading port
 ##   cargo        the whaler's catch (Augments) sells wherever they trade
 ## Arriving with low morale, some hands desert (or, in a haven, stay ashore).
@@ -102,6 +103,7 @@ func _build() -> void:
 
 ## The fort has fallen. The town's people work for us now, or we take everything.
 func _add_occupied(run: RunState) -> void:
+	_add_armoury(run)
 	if (run.hull < run.max_hull or run.sails < run.max_sails) and not _used.has("refit"):
 		add_button("Put the shipwrights to work: full refit (free)", _forced_refit)
 	if _wounded(run) > 0 and not _used.has("surgeon"):
@@ -119,6 +121,30 @@ func _add_occupied(run: RunState) -> void:
 		var o: Dictionary = _offers[i]
 		add_button("Hire %s, %s (%d gold)" % [o["name"], _role_name(o), _price(HIRE_COST + Hub.hire_extra(o))], _hire.bind(i))
 	_add_shipyard(run)
+
+
+## The fort's armoury holds one of her faction's own augments, rolled once.
+func _add_armoury(run: RunState) -> void:
+	if _used.has("armoury"):
+		return
+	if not _used.has("armoury_id"):
+		_used["armoury_id"] = Augments.roll(run, [], _owner)
+	var id := str(_used["armoury_id"])
+	if id != "" and not run.augments.has(id):
+		add_button("Break open the armoury: %s (free)" % Augments.describe(id), _take_armoury.bind(id))
+
+
+func _take_armoury(id: String) -> void:
+	offer_augment(id, _armoury_done.bind(id))
+
+
+func _armoury_done(fitted: bool, id: String) -> void:
+	if fitted:
+		_used["armoury"] = true
+		_note = "From the fort's armoury: %s comes aboard." % Augments.name_of(id)
+	else:
+		_note = "You leave the armoury as you found it. For now."
+	_rebuild()
 
 
 func _add_trade(run: RunState) -> void:
